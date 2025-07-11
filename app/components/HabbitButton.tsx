@@ -10,7 +10,7 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
   let subtitle = "0/10";
   let completed = false;
   return (
-    <button
+    <div
       className={`
         ${bgColor} 
         rounded-2xl 
@@ -24,8 +24,7 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         border-gray-100
         hover:shadow-md 
         transition-all 
-        duration-200
-        active:scale-95
+      
       `}
     >
       <div className="flex items-center space-x-4">
@@ -37,7 +36,7 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
       </div>
 
       {/* Правая часть - кнопка действия */}
-      <div className="flex-shrink-0">
+      <button className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
         {completed ? (
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
             <svg
@@ -67,8 +66,8 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
             </svg>
           </div>
         )}
-      </div>
-    </button>
+      </button>
+    </div>
   );
 };
 
