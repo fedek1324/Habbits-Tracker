@@ -1,3 +1,6 @@
+import { LuTrash } from "react-icons/lu";
+
+
 interface HabbitButtonProps {
   title: string;
   bgColor: string;
@@ -35,38 +38,39 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         </div>
       </div>
 
-      {/* Правая часть - кнопка действия */}
-      <button className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
-        {completed ? (
+      <div className="flex space-x-2">
+        {/* Правая часть - кнопка действия */}
+        <button className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
             <svg
               className="w-5 h-5 text-gray-600"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
+              {completed ? (
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              ) : (
+                <path
+                  fillRule="evenodd"
+                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                  clipRule="evenodd"
+                />
+              )}
             </svg>
           </div>
-        ) : (
+        </button>
+
+        {/* Правая часть - кнопка удаления */}
+        <button className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-gray-600"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <LuTrash  />
           </div>
-        )}
-      </button>
+        </button>
+      </div>
     </div>
   );
 };
