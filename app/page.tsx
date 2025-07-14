@@ -1,5 +1,6 @@
 import Image from "next/image";
 import HabitButton from "./components/HabbitButton";
+import AddHabbit from "./components/AddHabbit";
 
 export default function Home() {
   return (
@@ -27,16 +28,7 @@ export default function Home() {
           />
         </div>
 
-        <button className="w-full mt-2 p-4 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center space-x-2 text-gray-500 hover:border-gray-300 hover:text-gray-600 transition-colors">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span>Add habbit</span>
-        </button>
+        <AddHabbit />
       </main>
     </div>
   );
