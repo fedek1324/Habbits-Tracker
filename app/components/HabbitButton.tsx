@@ -3,19 +3,22 @@ import { LuTrash } from "react-icons/lu";
 
 interface HabbitButtonProps {
   title: string;
+  currentCount: number,
+  totalCount: number
   bgColor: string;
 }
 
 const HabitButton: React.FC<HabbitButtonProps> = ({
   title,
-  bgColor = "bg-white",
+  currentCount,
+  totalCount,
+  bgColor = "white",
 }) => {
-  let subtitle = "0/10";
+  let subtitle = `${currentCount}/${totalCount}`;
   let completed = false;
   return (
     <div
       className={`
-        ${bgColor} 
         rounded-2xl 
         p-4 
         w-full 
@@ -23,12 +26,11 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         items-center 
         justify-between 
         shadow-sm 
-        border 
-        border-gray-100
         hover:shadow-md 
         transition-all 
       
       `}
+     style={{ backgroundColor: bgColor }}
     >
       <div className="flex items-center space-x-4">
         {/* Текст */}

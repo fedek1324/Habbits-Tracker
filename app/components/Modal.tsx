@@ -22,7 +22,7 @@ const Modal: React.FC<ModalProps> = ({ modalOpen, setModalOpen, children }) => {
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl p-6 w-full max-w-md shadow-xl bg-white"
+      className="rounded-2xl p-6 w-full max-w-md shadow-xl bg-white fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 m-0"
       onCancel={() => setModalOpen(false)}
       onClose={() => setModalOpen(false)}
     >
