@@ -5,8 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
 import { FormEventHandler, useState } from "react";
 import Modal from "./Modal";
+import IHabbit from "@/types/habbit";
 
-const AddHabbit: React.FC = () => {
+const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({ onAdd }) => {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [newHabbitText, setNewHabbitText] = useState<string>("");
@@ -16,15 +17,16 @@ const AddHabbit: React.FC = () => {
     e
   ) => {
     e.preventDefault();
-    await addHabit({
+    const newHabbit = {
       id: uuidv4(),
       text: newHabbitText,
       currentCount: 0,
       needCount: newHabbitCount,
-    });
+    };
+    await addHabit(newHabbit);
+    onAdd(newHabbit);
     setNewHabbitText("");
     setModalOpen(false);
-    router.refresh();
   };
 
   return (
