@@ -46,3 +46,11 @@ export const getHabits = async (): Promise<IHabbit[]> => {
     return [];
   }
 };
+
+export const updateHabit = async (updatedHabit: IHabbit): Promise<void> => {
+  const habits = JSON.parse(localStorage.getItem("habits") || "[]");
+  const updated = habits.map((habit: IHabbit) =>
+    habit.id === updatedHabit.id ? updatedHabit : habit
+  );
+  localStorage.setItem("habits", JSON.stringify(updated));
+}

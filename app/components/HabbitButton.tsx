@@ -26,11 +26,7 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
   onIncrement
 }) => {
   let subtitle = `${habbit.currentCount}/${habbit.needCount}`;
-  let completed = false;
-
-  const handleActionButtonOnClick = () => {
-
-  }
+  let completed = habbit.currentCount === habbit.needCount;
 
   return (
     <div

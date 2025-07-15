@@ -3,7 +3,7 @@
 import Image from "next/image";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
-import { getHabits } from "@/api";
+import { getHabits, updateHabit } from "@/api";
 import { useEffect, useState } from "react";
 import IHabbit from "@/types/habbit";
 
@@ -18,9 +18,24 @@ export default function Home() {
     setHabbits((prev) => [...prev, newHabit]);
   };
 
-  const handleIncrement = (habbitId: string) => {
+const handleIncrement = (id: string) => {
+  setHabbits((prev) =>
+    prev.map((h) =>
+      h.id === id && h.currentCount < h.needCount
+        ? { ...h, currentCount: h.currentCount + 1 }
+        : h
+    )
+  );
 
+  // Async update in API
+  const habitToUpdate = habbits.find(habbit => habbit.id === id);
+  if (habitToUpdate) {
+    updateHabit(habitToUpdate).catch(() => {
+      // Can show toast on error
+      console.error("Error on habbit counter increment");
+    });
   }
+};
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-4 sm:p-8 bg-gray-100">
