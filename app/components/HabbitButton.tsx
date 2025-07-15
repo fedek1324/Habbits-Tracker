@@ -1,21 +1,37 @@
+import IHabbit from "@/types/habbit";
 import { LuTrash } from "react-icons/lu";
 
 
+function getPastelColorFromId(id: string): string {
+  // Простая хеш-функция
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // Ограничим hue от 0 до 360
+  const hue = Math.abs(hash) % 360;
+
+  // HSL: высокая светлота (80%), малая насыщенность 90%) → пастельные
+  return `hsl(${hue}, 80%, 94%)`;
+}
+
 interface HabbitButtonProps {
-  title: string;
-  currentCount: number,
-  totalCount: number
-  bgColor: string;
+  habbit: IHabbit
+  onIncrement: (id: string) => void;
 }
 
 const HabitButton: React.FC<HabbitButtonProps> = ({
-  title,
-  currentCount,
-  totalCount,
-  bgColor = "white",
+  habbit,
+  onIncrement
 }) => {
-  let subtitle = `${currentCount}/${totalCount}`;
+  let subtitle = `${habbit.currentCount}/${habbit.needCount}`;
   let completed = false;
+
+  const handleActionButtonOnClick = () => {
+
+  }
+
   return (
     <div
       className={`
@@ -30,19 +46,21 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         transition-all 
       
       `}
-     style={{ backgroundColor: bgColor }}
+     style={{ backgroundColor: getPastelColorFromId(habbit.id) }}
     >
       <div className="flex items-center space-x-4">
-        {/* Текст */}
+        {/* Text */}
         <div className="text-left">
-          <div className="text-lg font-medium text-gray-900">{title}</div>
+          <div className="text-lg font-medium text-gray-900">{habbit.text}</div>
           {subtitle && <div className="text-sm text-gray-500">{subtitle}</div>}
         </div>
       </div>
 
       <div className="flex space-x-2">
-        {/* Правая часть - кнопка действия */}
-        <button className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
+        {/* Right part - action button */}
+        <button 
+          onClick={() => onIncrement(habbit.id)}
+          className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
             <svg
               className="w-5 h-5 text-gray-600"
@@ -66,7 +84,7 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
           </div>
         </button>
 
-        {/* Правая часть - кнопка удаления */}
+        {/* Right part - delete button */}
         <button className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
             <LuTrash  />

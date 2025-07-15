@@ -7,20 +7,6 @@ import { getHabits } from "@/api";
 import { useEffect, useState } from "react";
 import IHabbit from "@/types/habbit";
 
-function getPastelColorFromId(id: string): string {
-  // Простая хеш-функция
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  // Ограничим hue от 0 до 360
-  const hue = Math.abs(hash) % 360;
-
-  // HSL: высокая светлота (80%), малая насыщенность 90%) → пастельные
-  return `hsl(${hue}, 80%, 94%)`;
-}
-
 export default function Home() {
   const [habbits, setHabbits] = useState<IHabbit[]>([]);
 
@@ -31,6 +17,10 @@ export default function Home() {
   const handleAdd = (newHabit: IHabbit) => {
     setHabbits((prev) => [...prev, newHabit]);
   };
+
+  const handleIncrement = (habbitId: string) => {
+
+  }
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-4 sm:p-8 bg-gray-100">
@@ -44,10 +34,8 @@ export default function Home() {
           {habbits.map((habbit) => (
             <HabitButton
               key={habbit.id}
-              title={habbit.text}
-              currentCount={habbit.currentCount}
-              totalCount={habbit.needCount}
-              bgColor={getPastelColorFromId(habbit.id)}
+              habbit={habbit}
+              onIncrement={handleIncrement}
             />
           ))}
         </div>

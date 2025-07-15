@@ -1,0 +1,4 @@
+Focus on new habbit text field on add habbit button click
+Add animation on add habbit button click
+add habbit text existance check
+Add paddinds for modal on mobile
