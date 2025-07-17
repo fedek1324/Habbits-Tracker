@@ -18,24 +18,30 @@ export default function Home() {
     setHabbits((prev) => [...prev, newHabit]);
   };
 
-const handleIncrement = (id: string) => {
-  setHabbits((prev) =>
-    prev.map((h) =>
-      h.id === id && h.currentCount < h.needCount
-        ? { ...h, currentCount: h.currentCount + 1 }
-        : h
-    )
-  );
+  console.log("Home render");
 
-  // Async update in API
-  const habitToUpdate = habbits.find(habbit => habbit.id === id);
-  if (habitToUpdate) {
-    updateHabit(habitToUpdate).catch(() => {
-      // Can show toast on error
-      console.error("Error on habbit counter increment");
-    });
-  }
-};
+  const handleIncrement = (id: string) => {
+    const habitToUpdate = habbits.find((habbit) => habbit.id === id);
+
+    if (habitToUpdate) {
+      habitToUpdate.currentCount = Math.min(
+        habitToUpdate.needCount,
+        habitToUpdate.currentCount + 1
+      );
+
+      setHabbits((prev) => prev.map((h) => (h.id === id ? habitToUpdate : h)));
+
+      // Async update in API
+      if (habitToUpdate) {
+        updateHabit(habitToUpdate)
+          .then(() => console.log("Updated habbit"))
+          .catch(() => {
+            // Can show toast on error
+            console.error("Error on habbit counter increment");
+          });
+      }
+    }
+  };
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-4 sm:p-8 bg-gray-100">
