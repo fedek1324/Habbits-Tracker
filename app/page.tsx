@@ -3,7 +3,12 @@
 import Image from "next/image";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
-import { getHabits, updateHabit } from "@/api";
+import {
+  getHabits,
+  updateHabit,
+  getLastResetDate,
+  setLastResetDate,
+} from "@/api";
 import { useEffect, useState } from "react";
 import IHabbit from "@/types/habbit";
 
@@ -11,7 +16,32 @@ export default function Home() {
   const [habbits, setHabbits] = useState<IHabbit[]>([]);
 
   useEffect(() => {
-    getHabits().then((habbits) => setHabbits(habbits));
+    async function setTodaysHabbits() {
+      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const lastResetDate = await getLastResetDate();
+
+      const fetchedHabbits = await getHabits();
+
+      if (!lastResetDate) {
+        setLastResetDate(today);
+        setHabbits(fetchedHabbits);
+      } else if (lastResetDate === today) {
+        setHabbits(fetchedHabbits);
+      } else {
+        const resetedHabbits = fetchedHabbits.map((habbit) => ({
+          ...habbit,
+          currentCount: 0,
+        }));
+
+        // write new habbits to api
+        resetedHabbits.forEach(habbit => updateHabit(habbit));
+        setLastResetDate(today);
+
+        setHabbits(resetedHabbits);
+      }
+    }
+
+    setTodaysHabbits();
   }, []);
 
   const handleAdd = (newHabit: IHabbit) => {

@@ -2,6 +2,7 @@ import IHabbit from "./types/habbit";
 
 // Storage key for habits in localStorage
 const HABITS_STORAGE_KEY = 'habits';
+const HABITS_RESET_DATE_STORAGE_KEY = 'habitsResetDate';
 
 /**
  * Adds a new habit to localStorage
@@ -52,5 +53,24 @@ export const updateHabit = async (updatedHabit: IHabbit): Promise<void> => {
   const updated = habits.map((habit: IHabbit) =>
     habit.id === updatedHabit.id ? updatedHabit : habit
   );
-  localStorage.setItem("habits", JSON.stringify(updated));
+  localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updated));
 }
+
+export const getLastResetDate = async (): Promise<string | null> => {
+  try {
+    const habitsResetDateJson = localStorage.getItem(HABITS_RESET_DATE_STORAGE_KEY);
+    return habitsResetDateJson ? JSON.parse(habitsResetDateJson) : null;
+  } catch (error) {
+    console.error('Error getting habits from localStorage:', error);
+    return null;
+  }
+};
+
+export const setLastResetDate = async (date: string): Promise<void> => {
+  try {
+    localStorage.setItem(HABITS_RESET_DATE_STORAGE_KEY, JSON.stringify(date));
+  } catch (error) {
+    console.error('Error getting habits from localStorage:', error);
+    return;
+  }
+};

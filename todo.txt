@@ -3,3 +3,4 @@ Add animation on add habbit button click
 add habbit text existance check
 Add paddinds for modal on mobile
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
+dont use resetedHabbits.forEach(habbit => updateHabit(habbit)); create update all habbits method
