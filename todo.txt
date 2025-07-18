@@ -10,3 +10,5 @@ check huge habbit text
 cant delete 0 on habbit count input
 add + and - buttons for mobile
 adjust no habbits state look (maybe add no habbits text)
+adjust animations 
+add history menu

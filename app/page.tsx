@@ -7,7 +7,7 @@ import {
   updateHabit,
   getLastResetDate,
   setLastResetDate,
-  deleteHabbit
+  deleteHabbit,
 } from "@/api";
 import { useEffect, useState } from "react";
 import IHabbit from "@/types/habbit";
@@ -84,21 +84,25 @@ export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-4 sm:p-8 bg-gray-100">
       <main className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md sm:max-w-2xl row-start-2 flex flex-col gap-6 items-center sm:items-start">
-        <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
-          Hello! Todays' habbits:
+        <h1 className="text-center text-xl sm:text-2xl font-semibold text-gray-800">
+          {habbits.length > 0
+            ? `Hello! Todays' habbits:`
+            : 'Hello! Add habbit using the button below'}
         </h1>
 
         {/* Список привычек */}
-        <div className="w-full space-y-4">
-          {habbits.map((habbit) => (
-            <HabitButton
-              key={habbit.id}
-              habbit={habbit}
-              onIncrement={handleIncrement}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        {habbits.length > 0 && (
+          <div className="w-full space-y-4">
+            {habbits.map((habbit) => (
+              <HabitButton
+                key={habbit.id}
+                habbit={habbit}
+                onIncrement={handleIncrement}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
 
         <AddHabbit onAdd={handleAdd} />
       </main>
