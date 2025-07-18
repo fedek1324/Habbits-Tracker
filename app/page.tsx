@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
 import {

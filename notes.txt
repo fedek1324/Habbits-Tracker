@@ -1,0 +1,5 @@
+When using localhost with client components on mobile 
+I see when habbit appear on screen
+
+To run on local network on mobile use npm run dev off vpn 
+and visit http://192.168.1.137:3000/

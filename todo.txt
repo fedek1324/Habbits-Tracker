@@ -1,3 +1,4 @@
+Use json server and dont use client components where it is possible
 Focus on new habbit text field on add habbit button click
 Add animation on add habbit button click
 add habbit text existance check
@@ -6,3 +7,6 @@ Use memo for habbit button to not repaint all habbit buttons on habbit increase 
 dont use resetedHabbits.forEach(habbit => updateHabit(habbit)); create update all habbits method
 check huge habbit text
 "Updated habbit" is in console output when habbit is 5/5 and i click to check mark instead of plus button
+cant delete 0 on habbit count input
+add + and - buttons for mobile
+adjust no habbits state look (maybe add no habbits text)

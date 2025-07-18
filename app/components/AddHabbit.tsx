@@ -8,7 +8,6 @@ import Modal from "./Modal";
 import IHabbit from "@/types/habbit";
 
 const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({ onAdd }) => {
-  const router = useRouter();
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [newHabbitText, setNewHabbitText] = useState<string>("");
   const [newHabbitCount, setNewHabbitCount] = useState<number>(1);
