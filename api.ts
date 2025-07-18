@@ -74,3 +74,11 @@ export const setLastResetDate = async (date: string): Promise<void> => {
     return;
   }
 };
+
+export const deleteHabbit = async (id: string): Promise<void> => {
+  const habits = JSON.parse(localStorage.getItem("habits") || "[]");
+  const updated = habits.filter((habit: IHabbit) =>
+    habit.id !== id
+  );
+  localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updated));
+}

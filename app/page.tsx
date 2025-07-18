@@ -8,6 +8,7 @@ import {
   updateHabit,
   getLastResetDate,
   setLastResetDate,
+  deleteHabbit
 } from "@/api";
 import { useEffect, useState } from "react";
 import IHabbit from "@/types/habbit";
@@ -33,8 +34,8 @@ export default function Home() {
           currentCount: 0,
         }));
 
-        // write new habbits to api
-        resetedHabbits.forEach(habbit => updateHabit(habbit));
+        // async write new habbits to api
+        resetedHabbits.forEach((habbit) => updateHabit(habbit));
         setLastResetDate(today);
 
         setHabbits(resetedHabbits);
@@ -47,8 +48,6 @@ export default function Home() {
   const handleAdd = (newHabit: IHabbit) => {
     setHabbits((prev) => [...prev, newHabit]);
   };
-
-  console.log("Home render");
 
   const handleIncrement = (id: string) => {
     const habitToUpdate = habbits.find((habbit) => habbit.id === id);
@@ -73,6 +72,16 @@ export default function Home() {
     }
   };
 
+  const handleDelete = (id: string) => {
+    setHabbits((prev) => prev.filter((h) => h.id !== id));
+    deleteHabbit(id)
+      .then(() => console.log("Habbit deleted"))
+      .catch(() => {
+        // Can show toast on error
+        console.error("Error on habbit delete");
+      });
+  };
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-4 sm:p-8 bg-gray-100">
       <main className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md sm:max-w-2xl row-start-2 flex flex-col gap-6 items-center sm:items-start">
@@ -87,6 +96,7 @@ export default function Home() {
               key={habbit.id}
               habbit={habbit}
               onIncrement={handleIncrement}
+              onDelete={handleDelete}
             />
           ))}
         </div>

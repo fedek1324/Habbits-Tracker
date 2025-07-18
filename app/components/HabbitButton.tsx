@@ -17,13 +17,15 @@ function getPastelColorFromId(id: string): string {
 }
 
 interface HabbitButtonProps {
-  habbit: IHabbit
-  onIncrement: (id: string) => void;
+  habbit: IHabbit,
+  onIncrement: (id: string) => void,
+  onDelete: (id: string) => void
 }
 
 const HabitButton: React.FC<HabbitButtonProps> = ({
   habbit,
-  onIncrement
+  onIncrement,
+  onDelete
 }) => {
   let subtitle = `${habbit.currentCount}/${habbit.needCount}`;
   let completed = habbit.currentCount === habbit.needCount;
@@ -81,7 +83,9 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         </button>
 
         {/* Right part - delete button */}
-        <button className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
+        <button 
+          onClick={() => onDelete(habbit.id)}
+          className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
             <LuTrash  />
           </div>
