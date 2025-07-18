@@ -3,3 +3,11 @@ I see when habbit appear on screen
 
 To run on local network on mobile use npm run dev off vpn 
 and visit http://192.168.1.137:3000/
+
+                "border rounded-lg " +
+                "px-4 py-2 focus:outline-none " +
+                "focus:ring-2" +
+                (countError
+                  ? "border-red-500 focus:ring-red-300"
+                  : "border-gray-300 focus:ring-blue-400")
+                  Seems like default does not set. Why?

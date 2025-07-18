@@ -12,3 +12,4 @@ add + and - buttons for mobile
 adjust no habbits state look (maybe add no habbits text)
 adjust animations 
 add history menu
+highlight "Hello" on welcome screen

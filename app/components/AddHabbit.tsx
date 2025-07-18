@@ -7,24 +7,43 @@ import { FormEventHandler, useState } from "react";
 import Modal from "./Modal";
 import IHabbit from "@/types/habbit";
 
-const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({ onAdd }) => {
+const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
+  onAdd,
+}) => {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [newHabbitText, setNewHabbitText] = useState<string>("");
-  const [newHabbitCount, setNewHabbitCount] = useState<number>(1);
+  const [newHabbitCount, setNewHabbitCount] = useState<string>("1");
+  const [countError, setCountError] = useState(""); // for error message
 
   const handleSubmitNewHabbit: FormEventHandler<HTMLFormElement> = async (
     e
   ) => {
     e.preventDefault();
+
+    let habbitCount;
+    if (!/^\d+$/.test(newHabbitCount)) {
+      setCountError("Enter a valid number");
+      return;
+    } else {
+      habbitCount = parseInt(newHabbitCount, 10);
+      if (!(habbitCount > 0 && habbitCount < 1e6)) {
+        setCountError("Enter a valid number > 0");
+        return;
+      }
+    }
+
     const newHabbit = {
       id: uuidv4(),
-      text: newHabbitText,
+      text: newHabbitText.trim(),
       currentCount: 0,
-      needCount: newHabbitCount,
+      needCount: habbitCount,
     };
+
     await addHabit(newHabbit);
     onAdd(newHabbit);
     setNewHabbitText("");
+    setNewHabbitCount("1");
+    setCountError("");
     setModalOpen(false);
   };
 
@@ -56,16 +75,31 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({ onAdd }) =>
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
 
-          <input
-            value={newHabbitCount}
-            onChange={(e) => setNewHabbitCount(Number(e.target.value))}
-            type="number"
-            min={1}
-            max={100}
-            placeholder="Repetitions per day"
-            aria-label="Repetitions per day"
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          {/* Количество повторений */}
+          <div className="flex flex-col">
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="Repetitions per day"
+              value={newHabbitCount}
+              onChange={(e) => {
+                setNewHabbitCount(e.target.value);
+                setCountError("");
+              }}
+              aria-label="Repetitions per day"
+              className={
+                "border border-gray-300 rounded-lg " +
+                "px-4 py-2 focus:outline-none " +
+                "focus:ring-2 focus:ring-blue-400" +
+                (countError
+                  ? "border-red-500 focus:ring-red-300"
+                  : "border-gray-300 focus:ring-blue-400")
+              }
+            />
+            {countError && (
+              <p className="mt-1 text-sm text-red-600">{countError}</p>
+            )}
+          </div>
 
           <button
             type="submit"
