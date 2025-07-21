@@ -1,7 +1,6 @@
 import IHabbit from "@/types/habbit";
 import { LuTrash } from "react-icons/lu";
 
-
 function getPastelColorFromId(id: string): string {
   // Простая хеш-функция
   let hash = 0;
@@ -17,15 +16,15 @@ function getPastelColorFromId(id: string): string {
 }
 
 interface HabbitButtonProps {
-  habbit: IHabbit,
-  onIncrement: (id: string) => void,
-  onDelete: (id: string) => void
+  habbit: IHabbit;
+  onIncrement: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 const HabitButton: React.FC<HabbitButtonProps> = ({
   habbit,
   onIncrement,
-  onDelete
+  onDelete,
 }) => {
   const subtitle = `${habbit.currentCount}/${habbit.needCount}`;
   const completed = habbit.currentCount === habbit.needCount;
@@ -44,21 +43,29 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         transition-all 
       
       `}
-     style={{ backgroundColor: getPastelColorFromId(habbit.id) }}
+      style={{ backgroundColor: getPastelColorFromId(habbit.id) }}
     >
       <div className="flex items-center space-x-4">
         {/* Text */}
         <div className="text-left">
-          <div className="text-lg font-medium text-gray-900">{habbit.text}</div>
-          {subtitle && <div className="text-sm text-gray-500">{subtitle}</div>}
+          <span
+            style={{ wordBreak: "break-word" }} className="block text-lg font-medium text-gray-900"
+            title={habbit.text}
+          >
+            {habbit.text}
+          </span>
+          {subtitle && (
+            <span className="block text-sm text-gray-500">{subtitle}</span>
+          )}
         </div>
       </div>
 
       <div className="flex space-x-2">
         {/* Right part - action button */}
-        <button 
+        <button
           onClick={() => onIncrement(habbit.id)}
-          className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
+          className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md "
+        >
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
             <svg
               className="w-5 h-5 text-gray-600"
@@ -83,11 +90,12 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         </button>
 
         {/* Right part - delete button */}
-        <button 
+        <button
           onClick={() => onDelete(habbit.id)}
-          className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md ">
+          className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md "
+        >
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-            <LuTrash  />
+            <LuTrash />
           </div>
         </button>
       </div>
