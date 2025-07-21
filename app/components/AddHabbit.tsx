@@ -13,7 +13,8 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [newHabbitText, setNewHabbitText] = useState<string>("");
   const [newHabbitCount, setNewHabbitCount] = useState<string>("1");
-  const [countError, setCountError] = useState(""); // for error message
+  const [countError, setCountError] = useState<string>(""); // for error message
+  const [textError, setTextError] = useState<string>(""); // for error message
 
   const handleSubmitNewHabbit: FormEventHandler<HTMLFormElement> = async (
     e
@@ -32,6 +33,11 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
       }
     }
 
+    if (newHabbitText === "" || newHabbitText.length > 1e3) {
+      setTextError("Enter a valid text");
+      return;
+    }
+
     const newHabbit = {
       id: uuidv4(),
       text: newHabbitText.trim(),
@@ -44,6 +50,7 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
     setNewHabbitText("");
     setNewHabbitCount("1");
     setCountError("");
+    setTextError("");
     setModalOpen(false);
   };
 
@@ -67,15 +74,32 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
         <form onSubmit={handleSubmitNewHabbit} className="flex flex-col gap-4">
           <h2 className="text-xl font-semibold">Add new habit</h2>
 
-          <input
-            value={newHabbitText}
-            onChange={(e) => setNewHabbitText(e.target.value)}
-            type="text"
-            placeholder="Habit name"
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          {/* Habbit name */}
+          <div className="flex flex-col">
+            <input
+              type="text"
+              placeholder="Habit name"
+              value={newHabbitText}
+              onChange={(e) => {
+                setNewHabbitText(e.target.value);
+                setTextError("");
+              }}
+              aria-label="Habbit name"
+              className={
+                "border border-gray-300 rounded-lg " +
+                "px-4 py-2 focus:outline-none " +
+                "focus:ring-2 focus:ring-blue-400" +
+                (textError
+                  ? "border-red-500 focus:ring-red-300"
+                  : "border-gray-300 focus:ring-blue-400")
+              }
+            />
+            {textError && (
+              <p className="mt-1 text-sm text-red-600">{textError}</p>
+            )}
+          </div>
 
-          {/* Количество повторений */}
+          {/* Repetitions count */}
           <div className="flex flex-col">
             <input
               type="text"
