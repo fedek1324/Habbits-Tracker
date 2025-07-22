@@ -45,6 +45,7 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
       text: newHabbitText.trim(),
       currentCount: 0,
       needCount: habbitCount,
+      history: []
     };
 
     await addHabit(newHabbit);

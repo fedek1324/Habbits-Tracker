@@ -50,6 +50,8 @@ export default function Home() {
   };
 
   const handleIncrement = (id: string) => {
+    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
     const habitToUpdate = habbits.find((habbit) => habbit.id === id);
 
     if (habitToUpdate) {
@@ -57,6 +59,18 @@ export default function Home() {
         habitToUpdate.needCount,
         habitToUpdate.currentCount + 1
       );
+
+      const lastEntry = habitToUpdate.history.find(
+        (entry) => entry.date === today
+      );
+      if (lastEntry) {
+        lastEntry.count = habitToUpdate.currentCount;
+      } else {
+        habitToUpdate.history.push({
+          date: today,
+          count: habitToUpdate.currentCount,
+        });
+      }
 
       setHabbits((prev) => prev.map((h) => (h.id === id ? habitToUpdate : h)));
 
@@ -88,7 +102,7 @@ export default function Home() {
         <h1 className="text-center text-xl sm:text-2xl font-semibold text-gray-800">
           {habbits.length > 0
             ? `Hello! Todays' habbits:`
-            : 'Hello! Add habbit using the button below'}
+            : "Hello! Add habbit using the button below"}
         </h1>
 
         {/*Google integration panel */}
