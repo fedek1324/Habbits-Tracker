@@ -12,7 +12,7 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
 }) => {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [newHabbitText, setNewHabbitText] = useState<string>("");
-  const [newHabbitCount, setNewHabbitCount] = useState<string>("1");
+  const [newHabbitCount, setNewHabbitCount] = useState<string>("");
   const [countError, setCountError] = useState<string>(""); // for error message
   const [textError, setTextError] = useState<string>(""); // for error message
 

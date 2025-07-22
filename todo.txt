@@ -13,3 +13,6 @@ adjust no habbits state look (maybe add no habbits text)
 adjust animations 
 add history menu
 highlight "Hello" on welcome screen
+
+edit habbits?
+add google sheets integration
