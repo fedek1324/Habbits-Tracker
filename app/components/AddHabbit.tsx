@@ -10,9 +10,11 @@ import IHabbit from "@/types/habbit";
 const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
   onAdd,
 }) => {
+  const habbitCountDefault = "";
+  const habbitTextDefault = "";
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [newHabbitText, setNewHabbitText] = useState<string>("");
-  const [newHabbitCount, setNewHabbitCount] = useState<string>("");
+  const [newHabbitText, setNewHabbitText] = useState<string>(habbitTextDefault);
+  const [newHabbitCount, setNewHabbitCount] = useState<string>(habbitCountDefault);
   const [countError, setCountError] = useState<string>(""); // for error message
   const [textError, setTextError] = useState<string>(""); // for error message
 
@@ -47,8 +49,8 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
 
     await addHabit(newHabbit);
     onAdd(newHabbit);
-    setNewHabbitText("");
-    setNewHabbitCount("1");
+    setNewHabbitText(habbitTextDefault);
+    setNewHabbitCount(habbitCountDefault);
     setCountError("");
     setTextError("");
     setModalOpen(false);
