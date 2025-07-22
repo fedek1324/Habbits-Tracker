@@ -2,6 +2,7 @@
 
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
+import IntegrationPannel from "./components/IntegrationPannel";
 import {
   getHabits,
   updateHabit,
@@ -14,6 +15,7 @@ import IHabbit from "@/types/habbit";
 
 export default function Home() {
   const [habbits, setHabbits] = useState<IHabbit[]>([]);
+  const [currentUser, setCurrentUser] = useState(undefined);
 
   useEffect(() => {
     async function setTodaysHabbits() {
@@ -40,7 +42,6 @@ export default function Home() {
         setHabbits(resetedHabbits);
       }
     }
-
     setTodaysHabbits();
   }, []);
 
@@ -90,7 +91,10 @@ export default function Home() {
             : 'Hello! Add habbit using the button below'}
         </h1>
 
-        {/* Список привычек */}
+        {/*Google integration panel */}
+        <IntegrationPannel currentUser={currentUser} />
+
+        {/* Habbits list */}
         {habbits.length > 0 && (
           <div className="w-full space-y-4">
             {habbits.map((habbit) => (
