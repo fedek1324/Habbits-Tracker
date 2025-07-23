@@ -48,7 +48,6 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
       history: []
     };
 
-    await addHabit(newHabbit);
     onAdd(newHabbit);
     setNewHabbitText(habbitTextDefault);
     setNewHabbitCount(habbitCountDefault);

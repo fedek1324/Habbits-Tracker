@@ -1,5 +1,8 @@
 import IHabbit from "@/types/habbit";
+import { FormEventHandler, useState } from "react";
 import { LuTrash } from "react-icons/lu";
+import { MdOutlineEdit } from "react-icons/md";
+import Modal from "./Modal";
 
 function getPastelColorFromId(id: string): string {
   // Простая хеш-функция
@@ -19,15 +22,33 @@ interface HabbitButtonProps {
   habbit: IHabbit;
   onIncrement: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (habbit: IHabbit) => void;
 }
 
 const HabitButton: React.FC<HabbitButtonProps> = ({
   habbit,
   onIncrement,
   onDelete,
+  onEdit,
 }) => {
   const subtitle = `${habbit.currentCount}/${habbit.needCount}`;
   const completed = habbit.currentCount === habbit.needCount;
+
+  const habbitCountDefault = "";
+  const habbitTextDefault = "";
+  const [isEditModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [newHabbitText, setNewHabbitText] = useState<string>(habbitTextDefault);
+  const [newHabbitCurrentCount, setNewHabbitCurrentCount] =
+    useState<string>(habbitCountDefault);
+  const [newHabbitNeedCount, setNewHabbitNeedCount] =
+    useState<string>(habbitCountDefault);
+  const [currentCountError, setCurrentCountError] = useState<string>(""); // for error message
+  const [needCountError, setNeedCountError] = useState<string>(""); // for error message
+  const [textError, setTextError] = useState<string>(""); // for error message
+
+  const handleEditHabbit: FormEventHandler<HTMLFormElement> = async (e) => {
+    e.preventDefault();
+  };
 
   return (
     <div
@@ -49,7 +70,8 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
         {/* Text */}
         <div className="text-left">
           <span
-            style={{ wordBreak: "break-word" }} className="block text-lg font-medium text-gray-900"
+            style={{ wordBreak: "break-word" }}
+            className="block text-lg font-medium text-gray-900"
             title={habbit.text}
           >
             {habbit.text}
@@ -88,6 +110,107 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
             </svg>
           </div>
         </button>
+
+        {/* Right part - edit button */}
+        <button
+          onClick={() => setEditModalOpen(true)}
+          className="rounded-full flex-shrink-0 active:scale-120 duration-30 transition-all hover:shadow-md "
+        >
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+            <MdOutlineEdit />
+          </div>
+        </button>
+
+        <Modal modalOpen={isEditModalOpen} setModalOpen={setEditModalOpen}>
+          <form onSubmit={handleEditHabbit} className="flex flex-col gap-4">
+            <h2 className="text-xl font-semibold">Edit habit</h2>
+
+            {/* Habbit name */}
+            <div className="flex flex-col">
+              <input
+                type="text"
+                placeholder="Habit name"
+                value={newHabbitText}
+                onChange={(e) => {
+                  setNewHabbitText(e.target.value);
+                  setTextError("");
+                }}
+                aria-label="Habbit name"
+                className={
+                  "border border-gray-300 rounded-lg " +
+                  "px-4 py-2 focus:outline-none " +
+                  "focus:ring-2 focus:ring-blue-400" +
+                  (textError
+                    ? "border-red-500 focus:ring-red-300"
+                    : "border-gray-300 focus:ring-blue-400")
+                }
+              />
+              {textError && (
+                <p className="mt-1 text-sm text-red-600">{textError}</p>
+              )}
+            </div>
+
+            {/* Current count */}
+            <div className="flex flex-col">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Current repetitions per day"
+                value={newHabbitCurrentCount}
+                onChange={(e) => {
+                  setNewHabbitCurrentCount(e.target.value);
+                  setCurrentCountError("");
+                }}
+                aria-label="Repetitions per day"
+                className={
+                  "border border-gray-300 rounded-lg " +
+                  "px-4 py-2 focus:outline-none " +
+                  "focus:ring-2 focus:ring-blue-400" +
+                  (currentCountError
+                    ? "border-red-500 focus:ring-red-300"
+                    : "border-gray-300 focus:ring-blue-400")
+                }
+              />
+              {currentCountError && (
+                <p className="mt-1 text-sm text-red-600">{currentCountError}</p>
+              )}
+            </div>
+
+            {/* Repetitions count */}
+            <div className="flex flex-col">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Need repetitions per day"
+                value={newHabbitNeedCount}
+                onChange={(e) => {
+                  setNewHabbitNeedCount(e.target.value);
+                  setNeedCountError("");
+                }}
+                aria-label="Repetitions per day"
+                className={
+                  "border border-gray-300 rounded-lg " +
+                  "px-4 py-2 focus:outline-none " +
+                  "focus:ring-2 focus:ring-blue-400" +
+                  (needCountError
+                    ? "border-red-500 focus:ring-red-300"
+                    : "border-gray-300 focus:ring-blue-400")
+                }
+              />
+              {needCountError && (
+                <p className="mt-1 text-sm text-red-600">{needCountError}</p>
+              )}
+            </div>
+
+            {/* Sumbit button */}
+            <button
+              type="submit"
+              className="bg-blue-500 text-white font-medium py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Submit
+            </button>
+          </form>
+        </Modal>
 
         {/* Right part - delete button */}
         <button
