@@ -57,8 +57,6 @@ export default function Home() {
   };
 
   const handleIncrement = (id: string) => {
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-
     const habitToUpdate = habbits.find((habbit) => habbit.id === id);
 
     if (habitToUpdate) {
@@ -67,11 +65,12 @@ export default function Home() {
         habitToUpdate.currentCount + 1
       );
 
-      const lastEntry = habitToUpdate.history.find(
+      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const todaysEntry = habitToUpdate.history.find(
         (entry) => entry.date === today
       );
-      if (lastEntry) {
-        lastEntry.count = habitToUpdate.currentCount;
+      if (todaysEntry) {
+        todaysEntry.count = habitToUpdate.currentCount;
       } else {
         habitToUpdate.history.push({
           date: today,
@@ -104,6 +103,18 @@ export default function Home() {
   };
 
   const handleEdit = (habbit: IHabbit) => {
+    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+    const todaysEntry = habbit.history.find((entry) => entry.date === today);
+    if (todaysEntry) {
+      todaysEntry.count = habbit.currentCount;
+    } else {
+      habbit.history.push({
+        date: today,
+        count: habbit.currentCount,
+      });
+    }
+
     setHabbits((prev) => prev.map((h) => (h.id === habbit.id ? habbit : h)));
 
     // Async update in API

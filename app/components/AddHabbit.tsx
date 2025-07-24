@@ -30,7 +30,7 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
     } else {
       habbitCount = parseInt(newHabbitCount, 10);
       if (!(habbitCount > 0 && habbitCount < 1e6)) {
-        setCountError("Enter a valid number > 0");
+        setCountError("Enter a valid number more than 0");
         return;
       }
     }

@@ -5,16 +5,16 @@ import { MdOutlineEdit } from "react-icons/md";
 import Modal from "./Modal";
 
 function getPastelColorFromId(id: string): string {
-  // Простая хеш-функция
+  // Simple hash function
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  // Ограничим hue от 0 до 360
+  // Restrict hue from 0 to 360
   const hue = Math.abs(hash) % 360;
 
-  // HSL: высокая светлота (80%), малая насыщенность 90%) → пастельные
+  // HSL: high saturation (80%), lightness 90%) → pastel color
   return `hsl(${hue}, 80%, 94%)`;
 }
 
@@ -36,8 +36,9 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
 
   const [isEditModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [newHabbitText, setNewHabbitText] = useState<string>(habbit.text);
-  const [newHabbitCurrentCount, setNewHabbitCurrentCount] =
-    useState<string>(String(habbit.currentCount));
+  const [newHabbitCurrentCount, setNewHabbitCurrentCount] = useState<string>(
+    String(habbit.currentCount)
+  );
   const [newHabbitNeedCount, setNewHabbitNeedCount] = useState<string>(
     String(habbit.needCount)
   );
@@ -47,6 +48,56 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
 
   const handleEditHabbit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
+
+    let habbitNeedCount;
+    if (!/^\d+$/.test(newHabbitNeedCount)) {
+      setNeedCountError("Enter a valid number");
+      return;
+    } else {
+      habbitNeedCount = parseInt(newHabbitNeedCount, 10);
+      if (!(habbitNeedCount > 0 && habbitNeedCount < 1e6)) {
+        setNeedCountError("Enter a valid number more that 0");
+        return;
+      }
+    }
+
+    let habbitCurrentCount;
+    if (!/^\d+$/.test(newHabbitCurrentCount)) {
+      setCurrentCountError("Enter a valid number");
+      return;
+    } else {
+      habbitCurrentCount = parseInt(newHabbitCurrentCount, 10);
+      if (!(habbitCurrentCount >= 0 && habbitCurrentCount < 1e6 && 
+        habbitCurrentCount <= habbitNeedCount
+      )) {
+        setCurrentCountError("Enter a valid number less or equal to habbit aim");
+        return;
+      }
+    }
+
+    if (newHabbitText === "" || newHabbitText.length > 1e3) {
+      setTextError("Enter a valid text");
+      return;
+    }
+
+    const updatedHabbit = {
+      id: habbit.id,
+      text: newHabbitText.trim(),
+      currentCount: habbitCurrentCount,
+      needCount: habbitNeedCount,
+      history: habbit.history,
+    };
+
+    onEdit(updatedHabbit);
+
+    setNewHabbitText("");
+    setNewHabbitCurrentCount("");
+    setNewHabbitNeedCount("");
+
+    setCurrentCountError("");
+    setNeedCountError("");
+    setTextError("");
+    setEditModalOpen(false);
   };
 
   useEffect(() => {
