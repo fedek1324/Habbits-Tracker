@@ -1,5 +1,5 @@
 import IHabbit from "@/types/habbit";
-import { FormEventHandler, useState } from "react";
+import { FormEventHandler, useEffect, useState } from "react";
 import { LuTrash } from "react-icons/lu";
 import { MdOutlineEdit } from "react-icons/md";
 import Modal from "./Modal";
@@ -34,14 +34,13 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
   const subtitle = `${habbit.currentCount}/${habbit.needCount}`;
   const completed = habbit.currentCount === habbit.needCount;
 
-  const habbitCountDefault = "";
-  const habbitTextDefault = "";
   const [isEditModalOpen, setEditModalOpen] = useState<boolean>(false);
-  const [newHabbitText, setNewHabbitText] = useState<string>(habbitTextDefault);
+  const [newHabbitText, setNewHabbitText] = useState<string>(habbit.text);
   const [newHabbitCurrentCount, setNewHabbitCurrentCount] =
-    useState<string>(habbitCountDefault);
-  const [newHabbitNeedCount, setNewHabbitNeedCount] =
-    useState<string>(habbitCountDefault);
+    useState<string>(String(habbit.currentCount));
+  const [newHabbitNeedCount, setNewHabbitNeedCount] = useState<string>(
+    String(habbit.needCount)
+  );
   const [currentCountError, setCurrentCountError] = useState<string>(""); // for error message
   const [needCountError, setNeedCountError] = useState<string>(""); // for error message
   const [textError, setTextError] = useState<string>(""); // for error message
@@ -49,6 +48,14 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
   const handleEditHabbit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
   };
+
+  useEffect(() => {
+    if (isEditModalOpen) {
+      setNewHabbitText(habbit.text);
+      setNewHabbitCurrentCount(String(habbit.currentCount));
+      setNewHabbitNeedCount(String(habbit.needCount));
+    }
+  }, [isEditModalOpen, habbit]);
 
   return (
     <div
