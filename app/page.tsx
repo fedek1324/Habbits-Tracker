@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
 import IntegrationPannel from "./components/IntegrationPannel";
+import BottomNavigation from "./components/BottomNavigation";
+import HistoryView from "./components/HistoryView";
 import {
   getHabits,
   updateHabit,
@@ -11,12 +14,12 @@ import {
   deleteHabbit,
   addHabit,
 } from "@/api";
-import { useEffect, useState } from "react";
 import IHabbit from "@/types/habbit";
 
 export default function Home() {
   const [habbits, setHabbits] = useState<IHabbit[]>([]);
   const [currentUser, setCurrentUser] = useState(undefined);
+  const [activeTab, setActiveTab] = useState<"today" | "history">("today");
 
   useEffect(() => {
     async function setTodaysHabbits() {
@@ -129,34 +132,46 @@ export default function Home() {
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-4 sm:p-8 bg-gray-100">
-      <main className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md sm:max-w-2xl row-start-2 flex flex-col gap-6 items-center sm:items-start">
-        <h1 className="text-center text-xl sm:text-2xl font-semibold text-gray-800">
-          {habbits.length > 0
-            ? `Hello! Todays' habbits:`
-            : "Hello! Add habbit using the button below"}
-        </h1>
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
+        <main className="p-4 pb-20">
+          {activeTab === "today" ? (
+            <>
+              <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
+                {habbits.length > 0
+                  ? `Hello! Today's habits:`
+                  : "Hello! Add habit using the button below"}
+              </h1>
 
-        {/*Google integration panel */}
-        <IntegrationPannel currentUser={currentUser} />
+              {/*Google integration panel */}
+              <div className="mb-4">
+                <IntegrationPannel currentUser={currentUser} />
+              </div>
 
-        {/* Habbits list */}
-        {habbits.length > 0 && (
-          <div className="w-full space-y-4">
-            {habbits.map((habbit) => (
-              <HabitButton
-                key={habbit.id}
-                habbit={habbit}
-                onIncrement={handleIncrement}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        )}
+              {/* Habbits list */}
+              {habbits.length > 0 && (
+                <div className="mb-4 w-full space-y-4">
+                  {habbits.map((habbit) => (
+                    <HabitButton
+                      key={habbit.id}
+                      habbit={habbit}
+                      onIncrement={handleIncrement}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+              )}
 
-        <AddHabbit onAdd={handleAdd} />
-      </main>
+              <AddHabbit onAdd={handleAdd} />
+            </>
+          ) : (
+            <HistoryView habbits={habbits} />
+          )}
+        </main>
+
+        <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
     </div>
   );
 }

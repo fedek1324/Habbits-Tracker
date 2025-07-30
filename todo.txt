@@ -14,5 +14,5 @@ adjust animations
 add history menu
 highlight "Hello" on welcome screen
 
-edit habbits?
+history
 add google sheets integration
