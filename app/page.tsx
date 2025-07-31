@@ -9,8 +9,6 @@ import HistoryView from "./components/HistoryView";
 import {
   getHabits,
   updateHabit,
-  getLastResetDate,
-  setLastResetDate,
   deleteHabbit,
   addHabit,
   getTodaySnapshot,
@@ -30,16 +28,15 @@ export default function Home() {
 
   useEffect(() => {
     async function initializeHabits() {
-      // const today = new Date().toISOString().slice(0, 10);
-      const today = "2025-08-04";
-      const lastResetDate = await getLastResetDate();
+      let todaySnapshot = await getTodaySnapshot();
       const fetchedHabits = await getHabits();
       
       // Check if we need to create new day
-      if (!lastResetDate || lastResetDate !== today) {
+      if (!todaySnapshot) {
         // Create today's snapshot with existing habits
+        const today = new Date().toISOString().slice(0, 10);
 
-        const todaySnapshot = {
+        todaySnapshot = {
           date: today,
           habbits: await Promise.all(fetchedHabits.map(async (habit) => ({
             habbitId: habit.id,
@@ -49,15 +46,14 @@ export default function Home() {
         };
         
         await saveDailySnapshot(todaySnapshot);
-        await setLastResetDate(today);
       }
       
       // Load today's counts
       const counts: {[habitId: string]: {needCount: number, actualCount: number}} = {};
-      for (const habit of fetchedHabits) {
-        counts[habit.id] = {
-          needCount: await getCurrentNeedCount(habit.id),
-          actualCount: await getCurrentActualCount(habit.id)
+      for (const habit of todaySnapshot.habbits) {
+        counts[habit.habbitId] = {
+          needCount: habit.habbitNeedCount,
+          actualCount: habit.habbitDidCount
         };
       }
       

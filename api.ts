@@ -58,25 +58,6 @@ export const updateHabit = async (updatedHabit: IHabbit): Promise<void> => {
   localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updated));
 }
 
-export const getLastResetDate = async (): Promise<string | null> => {
-  try {
-    const habitsResetDateJson = localStorage.getItem(HABITS_RESET_DATE_STORAGE_KEY);
-    return habitsResetDateJson ? JSON.parse(habitsResetDateJson) : null;
-  } catch (error) {
-    console.error('Error getting habits from localStorage:', error);
-    return null;
-  }
-};
-
-export const setLastResetDate = async (date: string): Promise<void> => {
-  try {
-    localStorage.setItem(HABITS_RESET_DATE_STORAGE_KEY, JSON.stringify(date));
-  } catch (error) {
-    console.error('Error getting habits from localStorage:', error);
-    return;
-  }
-};
-
 export const deleteHabbit = async (id: string): Promise<void> => {
   const habits = JSON.parse(localStorage.getItem("habits") || "[]");
   const updated = habits.filter((habit: IHabbit) =>
