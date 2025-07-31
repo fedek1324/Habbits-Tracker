@@ -69,7 +69,7 @@ export default function Home() {
       habbitDidCount: 0,
     });
     await saveDailySnapshot(todaySnapshot);
-    
+
     await addHabit(newHabbit);
   };
 
@@ -98,8 +98,19 @@ export default function Home() {
   const handleDelete = async (id: string) => {
     setHabbits((prev) => prev.filter((h) => h.id !== id));
 
-    // setHabitCounts((prev) => {prev[id] = undefined; return prev;}));
+    setHabitCounts((prev) => {
+      const { [id]: _, ...rest } = prev;
+      return rest;
+    });
+
     await deleteHabbit(id);
+
+    const todaySnapshot = await getTodaySnapshot();
+    const newSnapshot = {
+      ...todaySnapshot,
+      habbits: todaySnapshot.habbits.filter((h) => h.habbitId !== id),
+    };
+    await saveDailySnapshot(newSnapshot);
   };
 
   const handleEdit = async (
