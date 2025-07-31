@@ -11,8 +11,9 @@ cant delete 0 on habbit count input
 add + and - buttons for mobile
 adjust no habbits state look (maybe add no habbits text)
 adjust animations 
-add history menu
+remove last reset date we can use last snapshot
+
 highlight "Hello" on welcome screen
 
-history
+create type for date
 add google sheets integration

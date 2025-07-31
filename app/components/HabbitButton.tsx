@@ -20,27 +20,31 @@ function getPastelColorFromId(id: string): string {
 
 interface HabbitButtonProps {
   habbit: IHabbit;
+  currentCount: number;
+  needCount: number;
   onIncrement: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (habbit: IHabbit) => void;
+  onEdit: (habbit: IHabbit, newNeedCount?: number, newActualCount?: number) => void;
 }
 
 const HabitButton: React.FC<HabbitButtonProps> = ({
   habbit,
+  currentCount,
+  needCount,
   onIncrement,
   onDelete,
   onEdit,
 }) => {
-  const subtitle = `${habbit.currentCount}/${habbit.needCount}`;
-  const completed = habbit.currentCount === habbit.needCount;
+  const subtitle = `${currentCount}/${needCount}`;
+  const completed = currentCount === needCount;
 
   const [isEditModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [newHabbitText, setNewHabbitText] = useState<string>(habbit.text);
   const [newHabbitCurrentCount, setNewHabbitCurrentCount] = useState<string>(
-    String(habbit.currentCount)
+    String(currentCount)
   );
   const [newHabbitNeedCount, setNewHabbitNeedCount] = useState<string>(
-    String(habbit.needCount)
+    String(needCount)
   );
   const [currentCountError, setCurrentCountError] = useState<string>(""); // for error message
   const [needCountError, setNeedCountError] = useState<string>(""); // for error message
@@ -83,12 +87,9 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
     const updatedHabbit = {
       id: habbit.id,
       text: newHabbitText.trim(),
-      currentCount: habbitCurrentCount,
-      needCount: habbitNeedCount,
-      history: habbit.history,
     };
 
-    onEdit(updatedHabbit);
+    onEdit(updatedHabbit, habbitNeedCount, habbitCurrentCount);
 
     setNewHabbitText("");
     setNewHabbitCurrentCount("");
@@ -103,10 +104,10 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
   useEffect(() => {
     if (isEditModalOpen) {
       setNewHabbitText(habbit.text);
-      setNewHabbitCurrentCount(String(habbit.currentCount));
-      setNewHabbitNeedCount(String(habbit.needCount));
+      setNewHabbitCurrentCount(String(currentCount));
+      setNewHabbitNeedCount(String(needCount));
     }
-  }, [isEditModalOpen, habbit]);
+  }, [isEditModalOpen, habbit, currentCount, needCount]);
 
   return (
     <div

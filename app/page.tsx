@@ -13,44 +13,80 @@ import {
   setLastResetDate,
   deleteHabbit,
   addHabit,
+  getTodaySnapshot,
+  saveDailySnapshot,
+  getCurrentNeedCount,
+  getCurrentActualCount,
+  updateHabitCount,
+  updateHabitNeedCount,
 } from "@/api";
 import IHabbit from "@/types/habbit";
 
 export default function Home() {
   const [habbits, setHabbits] = useState<IHabbit[]>([]);
+  const [habitCounts, setHabitCounts] = useState<{[habitId: string]: {needCount: number, actualCount: number}}>({});
   const [currentUser, setCurrentUser] = useState(undefined);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
 
   useEffect(() => {
-    async function setTodaysHabbits() {
-      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    async function initializeHabits() {
+      // const today = new Date().toISOString().slice(0, 10);
+      const today = "2025-08-04";
       const lastResetDate = await getLastResetDate();
+      const fetchedHabits = await getHabits();
+      
+      // Check if we need to create new day
+      if (!lastResetDate || lastResetDate !== today) {
+        // Create today's snapshot with existing habits
 
-      const fetchedHabbits = await getHabits();
-
-      if (!lastResetDate) {
-        setLastResetDate(today);
-        setHabbits(fetchedHabbits);
-      } else if (lastResetDate === today) {
-        setHabbits(fetchedHabbits);
-      } else {
-        const resetedHabbits = fetchedHabbits.map((habbit) => ({
-          ...habbit,
-          currentCount: 0,
-        }));
-
-        // async write new habbits to api
-        resetedHabbits.forEach((habbit) => updateHabit(habbit));
-        setLastResetDate(today);
-
-        setHabbits(resetedHabbits);
+        const todaySnapshot = {
+          date: today,
+          habbits: await Promise.all(fetchedHabits.map(async (habit) => ({
+            habbitId: habit.id,
+            habbitNeedCount: await getCurrentNeedCount(habit.id),
+            habbitDidCount: 0
+          })))
+        };
+        
+        await saveDailySnapshot(todaySnapshot);
+        await setLastResetDate(today);
       }
+      
+      // Load today's counts
+      const counts: {[habitId: string]: {needCount: number, actualCount: number}} = {};
+      for (const habit of fetchedHabits) {
+        counts[habit.id] = {
+          needCount: await getCurrentNeedCount(habit.id),
+          actualCount: await getCurrentActualCount(habit.id)
+        };
+      }
+      
+      setHabbits(fetchedHabits);
+      setHabitCounts(counts);
     }
-    setTodaysHabbits();
+    
+    initializeHabits();
   }, []);
 
-  const handleAdd = (newHabbit: IHabbit) => {
+  const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
     setHabbits((prev) => [...prev, newHabbit]);
+    
+    // Add to today's snapshot
+    const todaySnapshot = await getTodaySnapshot();
+    if (todaySnapshot) {
+      todaySnapshot.habbits.push({
+        habbitId: newHabbit.id,
+        habbitNeedCount: needCount,
+        habbitDidCount: 0
+      });
+      await saveDailySnapshot(todaySnapshot);
+    }
+    
+    // Update local counts
+    setHabitCounts(prev => ({
+      ...prev,
+      [newHabbit.id]: { needCount: needCount, actualCount: 0 }
+    }));
 
     addHabit(newHabbit)
       .then(() => console.log("Added new habbit"))
@@ -59,40 +95,26 @@ export default function Home() {
       });
   };
 
-  const handleIncrement = (id: string) => {
-    const habitToUpdate = habbits.find((habbit) => habbit.id === id);
-
-    if (habitToUpdate) {
-      habitToUpdate.currentCount = Math.min(
-        habitToUpdate.needCount,
-        habitToUpdate.currentCount + 1
-      );
-
-      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-      const todaysEntry = habitToUpdate.history.find(
-        (entry) => entry.date === today
-      );
-      if (todaysEntry) {
-        todaysEntry.count = habitToUpdate.currentCount;
-      } else {
-        habitToUpdate.history.push({
-          date: today,
-          count: habitToUpdate.currentCount,
-        });
+  const handleIncrement = async (id: string) => {
+    const currentCounts = habitCounts[id];
+    if (!currentCounts) return;
+    
+    const newActualCount = Math.min(
+      currentCounts.needCount,
+      currentCounts.actualCount + 1
+    );
+    
+    // Update local state
+    setHabitCounts(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        actualCount: newActualCount
       }
-
-      setHabbits((prev) => prev.map((h) => (h.id === id ? habitToUpdate : h)));
-
-      // Async update in API
-      if (habitToUpdate) {
-        updateHabit(habitToUpdate)
-          .then(() => console.log("Updated habbit"))
-          .catch(() => {
-            // Can show toast on error
-            console.error("Error on habbit counter increment");
-          });
-      }
-    }
+    }));
+    
+    // Update in snapshot
+    await updateHabitCount(id, newActualCount);
   };
 
   const handleDelete = (id: string) => {
@@ -105,30 +127,39 @@ export default function Home() {
       });
   };
 
-  const handleEdit = (habbit: IHabbit) => {
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-
-    const todaysEntry = habbit.history.find((entry) => entry.date === today);
-    if (todaysEntry) {
-      todaysEntry.count = habbit.currentCount;
-    } else {
-      habbit.history.push({
-        date: today,
-        count: habbit.currentCount,
-      });
-    }
-
+  const handleEdit = async (habbit: IHabbit, newNeedCount?: number, newActualCount?: number) => {
+    // Update habit text
     setHabbits((prev) => prev.map((h) => (h.id === habbit.id ? habbit : h)));
-
-    // Async update in API
-    if (habbit) {
-      updateHabit(habbit)
-        .then(() => console.log("Updated habbit"))
-        .catch(() => {
-          // Can show toast on error
-          console.error("Error on habbit edit");
-        });
+    
+    // Update counts if provided
+    if (newNeedCount !== undefined) {
+      await updateHabitNeedCount(habbit.id, newNeedCount);
+      setHabitCounts(prev => ({
+        ...prev,
+        [habbit.id]: {
+          ...prev[habbit.id],
+          needCount: newNeedCount
+        }
+      }));
     }
+    
+    if (newActualCount !== undefined) {
+      await updateHabitCount(habbit.id, newActualCount);
+      setHabitCounts(prev => ({
+        ...prev,
+        [habbit.id]: {
+          ...prev[habbit.id],
+          actualCount: newActualCount
+        }
+      }));
+    }
+
+    // Update habit info
+    updateHabit(habbit)
+      .then(() => console.log("Updated habbit"))
+      .catch(() => {
+        console.error("Error on habbit edit");
+      });
   };
 
   return (
@@ -151,15 +182,20 @@ export default function Home() {
               {/* Habbits list */}
               {habbits.length > 0 && (
                 <div className="mb-4 w-full space-y-4">
-                  {habbits.map((habbit) => (
-                    <HabitButton
-                      key={habbit.id}
-                      habbit={habbit}
-                      onIncrement={handleIncrement}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
+                  {habbits.map((habbit) => {
+                    const counts = habitCounts[habbit.id] || { needCount: 1, actualCount: 0 };
+                    return (
+                      <HabitButton
+                        key={habbit.id}
+                        habbit={habbit}
+                        currentCount={counts.actualCount}
+                        needCount={counts.needCount}
+                        onIncrement={handleIncrement}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    );
+                  })}
                 </div>
               )}
 

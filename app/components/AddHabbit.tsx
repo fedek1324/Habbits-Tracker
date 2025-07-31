@@ -7,7 +7,7 @@ import { FormEventHandler, useState } from "react";
 import Modal from "./Modal";
 import IHabbit from "@/types/habbit";
 
-const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
+const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit, needCount: number) => void }> = ({
   onAdd,
 }) => {
   const habbitCountDefault = "";
@@ -43,12 +43,9 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit) => void }> = ({
     const newHabbit = {
       id: uuidv4(),
       text: newHabbitText.trim(),
-      currentCount: 0,
-      needCount: habbitCount,
-      history: []
     };
 
-    onAdd(newHabbit);
+    onAdd(newHabbit, habbitCount);
     setNewHabbitText(habbitTextDefault);
     setNewHabbitCount(habbitCountDefault);
     setCountError("");

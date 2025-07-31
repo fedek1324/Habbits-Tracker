@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import IHabbit from "@/types/habbit";
+import IDailySnapshot from "@/types/dailySnapshot";
+import { getDailySnapshots } from "@/api";
 import { IoCheckmarkCircle } from "react-icons/io5";
 
 interface HistoryViewProps {
@@ -12,18 +14,43 @@ type Period = "daily" | "weekly" | "monthly";
 
 const HistoryView: React.FC<HistoryViewProps> = ({ habbits }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
+  const [snapshots, setSnapshots] = useState<IDailySnapshot[]>([]);
+  
+  useEffect(() => {
+    const loadSnapshots = async () => {
+      const data = await getDailySnapshots();
+      setSnapshots(data);
+    };
+    loadSnapshots();
+  }, []);
 
-  // Функция для получения данных истории за определенный день
+  // Функция для получения данных истории за определенный день из snapshots
   const getHabitsForDate = (date: string) => {
+    const snapshot = snapshots.find(s => s.date === date);
+    if (!snapshot) {
+      // Если нет snapshot для этого дня, показываем привычки с нулевыми значениями
+      return habbits.map((habit) => ({
+        ...habit,
+        countForDate: 0,
+        needCountForDate: 1,
+        completedForDate: false,
+      }));
+    }
+    
+    // Объединяем информацию из snapshot с текущими привычками
     return habbits.map((habit) => {
-      const historyEntry = habit.history.find((h) => h.date === date);
+      const snapshotHabit = snapshot.habbits.find(h => h.habbitId === habit.id);
       return {
         ...habit,
-        countForDate: historyEntry?.count || 0,
-        completedForDate: historyEntry
-          ? historyEntry.count >= habit.needCount
+        countForDate: snapshotHabit?.habbitDidCount || 0,
+        needCountForDate: snapshotHabit?.habbitNeedCount || 1,
+        completedForDate: snapshotHabit 
+          ? snapshotHabit.habbitDidCount >= snapshotHabit.habbitNeedCount
           : false,
       };
+    }).filter(habit => {
+      // Показываем только те привычки, которые были активны в тот день
+      return snapshot.habbits.some(h => h.habbitId === habit.id);
     });
   };
 
@@ -46,7 +73,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ habbits }) => {
           date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         habits: habitsForDay,
         completedCount,
-        totalCount: habbits.length,
+        totalCount: habitsForDay.length, // Используем длину фактических привычек для этого дня
       });
     }
     
@@ -109,7 +136,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ habbits }) => {
                   <span className="text-sm text-gray-700">{habit.text}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-500">
-                      {habit.countForDate}/{habit.needCount}
+                      {habit.countForDate}/{habit.needCountForDate}
                     </span>
                     {habit.completedForDate && (
                       <IoCheckmarkCircle className="w-5 h-5 text-green-600" />
