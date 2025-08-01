@@ -5,15 +5,14 @@ import IHabbit from "@/types/habbit";
 import { getDailySnapshots, getHabit, getHabits } from "@/api";
 import { IoCheckmarkCircle } from "react-icons/io5";
 
-interface HistoryViewProps {
-}
+interface HistoryViewProps {}
 
 type Period = "daily" | "weekly" | "monthly";
 
 type DailyHistory = {
   date: string;
   habits: {
-    habbitId: string,
+    habbitId: string;
     habbitText: string;
     habbitNeedCount: number;
     habbitHasCount: number;
@@ -33,9 +32,7 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
   }, []);
 
   // Get the last 30 days for example
-  const getLast30DaysHistory = async (): Promise<
-    Array<DailyHistory>
-  > => {
+  const getLast30DaysHistory = async (): Promise<Array<DailyHistory>> => {
     const daysHistory = [];
     const today = new Date();
 
@@ -60,7 +57,7 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
   const formatDisplayDate = (dateString: string, dayIndex: number): string => {
     if (dayIndex === 0) return "Today";
     if (dayIndex === 1) return "Yesterday";
-    
+
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -69,12 +66,12 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
   };
 
   // Function to calculate completed habits count for a day
-  const getCompletedCount = (habits: DailyHistory['habits']): number => {
-    return habits.filter(h => h.habbitHasCount >= h.habbitNeedCount).length;
+  const getCompletedCount = (habits: DailyHistory["habits"]): number => {
+    return habits.filter((h) => h.habbitHasCount >= h.habbitNeedCount).length;
   };
 
   // Function to get total habits count for a day
-  const getTotalCount = (habits: DailyHistory['habits']): number => {
+  const getTotalCount = (habits: DailyHistory["habits"]): number => {
     return habits.length;
   };
 
@@ -82,7 +79,7 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
     date: string
   ): Promise<
     Array<{
-      habbitId: string,
+      habbitId: string;
       habbitText: string;
       habbitNeedCount: number;
       habbitHasCount: number;
@@ -145,9 +142,12 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
               <h3 className="font-medium text-gray-900">
                 {formatDisplayDate(day.date, history.indexOf(day))}
               </h3>
-              <span className="text-sm text-gray-500">
-                {getCompletedCount(day.habits)}/{getTotalCount(day.habits)} completed
-              </span>
+              {getTotalCount(day.habits) !== 0 && (
+                <span className="text-sm text-gray-500">
+                  {getCompletedCount(day.habits)}/{getTotalCount(day.habits)}{" "}
+                  completed
+                </span>
+              )}
             </div>
 
             {/* Habits for this day */}
@@ -158,10 +158,16 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
                     key={habit.habbitId}
                     className={`
                       flex justify-between items-center p-3 rounded-lg
-                      ${habit.habbitHasCount === habit.habbitNeedCount ? "bg-green-50" : "bg-gray-50"}
+                      ${
+                        habit.habbitHasCount === habit.habbitNeedCount
+                          ? "bg-green-50"
+                          : "bg-gray-50"
+                      }
                     `}
                   >
-                    <span className="text-sm text-gray-700">{habit.habbitText}</span>
+                    <span className="text-sm text-gray-700">
+                      {habit.habbitText}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500">
                         {habit.habbitHasCount}/{habit.habbitNeedCount}
