@@ -7,7 +7,7 @@ import { IoCheckmarkCircle } from "react-icons/io5";
 
 interface HistoryViewProps {}
 
-type Period = "daily" | "weekly" | "monthly";
+// type Period = "daily" | "weekly" | "monthly";
 
 type DailyHistory = {
   date: string;
@@ -20,7 +20,7 @@ type DailyHistory = {
 };
 
 const HistoryView: React.FC<HistoryViewProps> = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
+  // const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
   const [history, setHistory] = useState<DailyHistory[]>([]);
 
   useEffect(() => {
@@ -114,7 +114,7 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
       {/* Padding for bottom navigation */}
       <h1 className="text-2xl font-semibold text-gray-800 mb-6">History</h1>
       {/* Period Selector */}
-      <div className="flex gap-2 mb-6">
+      {/* <div className="flex gap-2 mb-6">
         {(["daily", "weekly", "monthly"] as Period[]).map((period) => (
           <button
             key={period}
@@ -132,7 +132,7 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
             {period.charAt(0).toUpperCase() + period.slice(1)}
           </button>
         ))}
-      </div>
+      </div> */}
       {/* History List */}
       <div className="space-y-6">
         {history.map((day) => (
