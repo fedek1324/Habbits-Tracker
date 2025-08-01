@@ -52,6 +52,18 @@ export const getHabits = async (): Promise<IHabbit[]> => {
   }
 };
 
+export const getHabit = async (id: string): Promise<IHabbit| undefined> => {
+  try {
+    const habitsJson = localStorage.getItem(HABITS_STORAGE_KEY);
+    let habbits: IHabbit[] = habitsJson ? JSON.parse(habitsJson) : [];
+    let searchHabbit = habbits.find(h => h.id === id);
+    return searchHabbit;
+  } catch (error) {
+    console.error("Error getting habits from localStorage:", error);
+    return undefined;
+  }
+};
+
 export const updateHabit = async (updatedHabit: IHabbit): Promise<void> => {
   const habits = JSON.parse(localStorage.getItem("habits") || "[]");
   const updated = habits.map((habit: IHabbit) =>
