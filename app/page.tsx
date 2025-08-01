@@ -193,7 +193,7 @@ export default function Home() {
               <AddHabbit onAdd={handleAdd} />
             </>
           ) : (
-            <HistoryView habbits={habbits} />
+            <HistoryView />
           )}
         </main>
 

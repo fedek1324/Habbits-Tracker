@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import IHabbit from "@/types/habbit";
-import IDailySnapshot from "@/types/dailySnapshot";
 import { getDailySnapshots, getHabit, getHabits } from "@/api";
 import { IoCheckmarkCircle } from "react-icons/io5";
 
 interface HistoryViewProps {
-  habbits: IHabbit[];
 }
 
 type Period = "daily" | "weekly" | "monthly";
@@ -25,7 +23,7 @@ type DailyHistory = {
   }[];
 };
 
-const HistoryView: React.FC<HistoryViewProps> = ({ habbits }) => {
+const HistoryView: React.FC<HistoryViewProps> = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
   const [history, setHistory] = useState<DailyHistory[]>([]);
 
