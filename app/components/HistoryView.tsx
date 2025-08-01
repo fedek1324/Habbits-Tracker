@@ -12,7 +12,6 @@ type Period = "daily" | "weekly" | "monthly";
 
 type DailyHistory = {
   date: string;
-  displayDate: string;
   completedCount: number;
   totalCount: number;
   habits: {
@@ -54,15 +53,6 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
 
       daysHistory.push({
         date: dateString,
-        displayDate:
-          i === 0
-            ? "Today"
-            : i === 1
-            ? "Yesterday"
-            : date.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              }),
         habits: habitsForDay,
         completedCount,
         totalCount: habitsForDay.length,
@@ -73,6 +63,18 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
   };
 
   // Function to get history data for a specific day from snapshots
+  // Function to format display date based on day index
+  const formatDisplayDate = (dateString: string, dayIndex: number): string => {
+    if (dayIndex === 0) return "Today";
+    if (dayIndex === 1) return "Yesterday";
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   const getHabitsForDate = async (
     date: string
   ): Promise<
@@ -137,7 +139,9 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
           <div key={day.date} className="border-b border-gray-100 pb-4">
             {/* Day Header */}
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-medium text-gray-900">{day.displayDate}</h3>
+              <h3 className="font-medium text-gray-900">
+                {formatDisplayDate(day.date, history.indexOf(day))}
+              </h3>
               <span className="text-sm text-gray-500">
                 {day.completedCount}/{day.totalCount} completed
               </span>
