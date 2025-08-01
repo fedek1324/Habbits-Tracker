@@ -12,8 +12,6 @@ type Period = "daily" | "weekly" | "monthly";
 
 type DailyHistory = {
   date: string;
-  completedCount: number;
-  totalCount: number;
   habits: {
     habbitId: string,
     habbitText: string;
@@ -47,15 +45,10 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
       const dateString = date.toISOString().slice(0, 10);
 
       const habitsForDay = await getHabitsForDate(dateString);
-      const completedCount = habitsForDay.filter(
-        (h) => h.habbitHasCount === h.habbitNeedCount
-      ).length;
 
       daysHistory.push({
         date: dateString,
         habits: habitsForDay,
-        completedCount,
-        totalCount: habitsForDay.length,
       });
     }
 
@@ -73,6 +66,16 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
       month: "short",
       day: "numeric",
     });
+  };
+
+  // Function to calculate completed habits count for a day
+  const getCompletedCount = (habits: DailyHistory['habits']): number => {
+    return habits.filter(h => h.habbitHasCount >= h.habbitNeedCount).length;
+  };
+
+  // Function to get total habits count for a day
+  const getTotalCount = (habits: DailyHistory['habits']): number => {
+    return habits.length;
   };
 
   const getHabitsForDate = async (
@@ -143,7 +146,7 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
                 {formatDisplayDate(day.date, history.indexOf(day))}
               </h3>
               <span className="text-sm text-gray-500">
-                {day.completedCount}/{day.totalCount} completed
+                {getCompletedCount(day.habits)}/{getTotalCount(day.habits)} completed
               </span>
             </div>
 
