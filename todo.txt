@@ -1,19 +1,17 @@
-Use json server and dont use client components where it is possible
 Focus on new habbit text field on add habbit button click
 Add animation on add habbit button click
 add habbit text existance check
 Add paddinds for modal on mobile
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
 dont use resetedHabbits.forEach(habbit => updateHabit(habbit)); create update all habbits method
-check huge habbit text
 "Updated habbit" is in console output when habbit is 5/5 and i click to check mark instead of plus button
-cant delete 0 on habbit count input
-add + and - buttons for mobile
+add + and - buttons for mobile number input
 adjust no habbits state look (maybe add no habbits text)
 adjust animations 
-remove last reset date we can use last snapshot
+use functions like updateHabitNeedCount instead of modifying todaySnapshots
 
 highlight "Hello" on welcome screen
 
+Use json server and dont use client components where it is possible
 create type for date
 add google sheets integration

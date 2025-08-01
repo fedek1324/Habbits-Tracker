@@ -13,8 +13,6 @@ import {
   addHabit,
   getTodaySnapshot,
   saveDailySnapshot,
-  getCurrentNeedCount,
-  getCurrentActualCount,
   updateHabitCount,
   updateHabitNeedCount,
 } from "@/api";

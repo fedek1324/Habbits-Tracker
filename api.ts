@@ -4,7 +4,6 @@ import IDailySnapshot from "./types/dailySnapshot";
 // Storage keys for localStorage
 const HABITS_STORAGE_KEY = "habits";
 const DAILY_SNAPSHOTS_STORAGE_KEY = "dailySnapshots";
-const HABITS_RESET_DATE_STORAGE_KEY = "habitsResetDate";
 
 /**
  * Adds a new habit to localStorage
