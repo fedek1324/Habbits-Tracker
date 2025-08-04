@@ -147,8 +147,7 @@ export default function Home() {
                         habbit={{
                           id: habit.habitId,
                           text: habit.text
-                        }
-                        }
+                        }}
                         currentCount={habit.actualCount}
                         needCount={habit.needCount}
                         onIncrement={handleIncrement}
