@@ -52,11 +52,11 @@ export const getHabits = async (): Promise<IHabbit[]> => {
   }
 };
 
-export const getHabit = async (id: string): Promise<IHabbit| undefined> => {
+export const getHabit = async (id: string): Promise<IHabbit | undefined> => {
   try {
     const habitsJson = localStorage.getItem(HABITS_STORAGE_KEY);
     let habbits: IHabbit[] = habitsJson ? JSON.parse(habitsJson) : [];
-    let searchHabbit = habbits.find(h => h.id === id);
+    let searchHabbit = habbits.find((h) => h.id === id);
     return searchHabbit;
   } catch (error) {
     console.error("Error getting habits from localStorage:", error);
@@ -80,6 +80,8 @@ export const deleteHabbit = async (id: string): Promise<void> => {
 
 // Daily snapshots functions
 export const getDailySnapshots = async (): Promise<IDailySnapshot[]> => {
+  await fillHistory;
+
   try {
     const snapshotsJson = localStorage.getItem(DAILY_SNAPSHOTS_STORAGE_KEY);
     return snapshotsJson ? JSON.parse(snapshotsJson) : [];
@@ -94,14 +96,28 @@ export const saveDailySnapshot = async (
 ): Promise<boolean> => {
   try {
     const existingSnapshots = await getDailySnapshots();
-    const updatedSnapshots = existingSnapshots.filter(
-      (s) => s.date !== snapshot.date
-    );
-    updatedSnapshots.push(snapshot);
+
+    // instert at proper position
+    for (let i = 0; i < existingSnapshots.length; i++) {
+      const element = existingSnapshots[i];
+      let isSameDay = element.date === snapshot.date;
+      let isAfterSnapshot = new Date(element.date) > new Date(snapshot.date);
+      let isLastElement = i === existingSnapshots.length - 1;
+      if (isSameDay) {
+        existingSnapshots[i] = snapshot;
+        break;
+      } else if (isAfterSnapshot) {
+        existingSnapshots.splice(i, 0, snapshot);
+        break;
+      } else if (isLastElement) {
+        existingSnapshots.push(snapshot);
+        break;
+      }
+    }
 
     localStorage.setItem(
       DAILY_SNAPSHOTS_STORAGE_KEY,
-      JSON.stringify(updatedSnapshots)
+      JSON.stringify(existingSnapshots)
     );
     return true;
   } catch (error) {
@@ -111,7 +127,7 @@ export const saveDailySnapshot = async (
 };
 
 export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   const snapshots = await getDailySnapshots();
   let todaySnapshot = snapshots.find((s) => s.date === today);
 
@@ -149,6 +165,45 @@ export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
   }
 
   return todaySnapshot;
+};
+
+// If there are empty days from last snapshot day and today, fill theese days with snapshots
+// so we will understand lates that there were habbits but they were not incremented
+export const fillHistory = async (): Promise<void> => {
+  // create todays snapshot to be sure it is created
+  await getTodaySnapshot();
+
+  // todat with time 00.00.00 for correct currentDate < today compare
+  const today = new Date(new Date().toISOString().split("T")[0]);
+  let previousSnapshot;
+  const snapshots = await getDailySnapshots();
+
+  if (snapshots.length > 1) {
+    previousSnapshot = snapshots.sort((a, b) =>
+      b.date.localeCompare(a.date)
+    )[1];
+
+    let currentDate = new Date(previousSnapshot.date);
+    currentDate.setDate(currentDate.getDate() + 1);
+
+    while (currentDate < today) {
+      let date = currentDate.toISOString().split("T")[0];
+      let snapshot = {
+        date: date,
+        habbits: previousSnapshot.habbits.map((h) => {
+          return {
+            habbitId: h.habbitId,
+            habbitNeedCount: h.habbitNeedCount,
+            habbitDidCount: 0,
+          };
+        }),
+      };
+
+      await saveDailySnapshot(snapshot);
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  }
 };
 
 // Helper function to get current need count for a habit
