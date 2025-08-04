@@ -7,9 +7,7 @@ const DAILY_SNAPSHOTS_STORAGE_KEY = "dailySnapshots";
 
 /**
  * Adds a new habit to localStorage
- * @param habit - habit object to add
- * @returns Promise<boolean> - true if addition is successful, false if error occurred
- */
+ * */
 export const addHabit = async (habit: IHabbit): Promise<boolean> => {
   try {
     // Get existing habits from localStorage
@@ -72,13 +70,22 @@ export const updateHabit = async (updatedHabit: IHabbit): Promise<void> => {
   localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updated));
 };
 
+/**
+ * delete Habbit in todays' snapshot
+ */
 export const deleteHabbit = async (id: string): Promise<void> => {
-  const habits = JSON.parse(localStorage.getItem("habits") || "[]");
-  const updated = habits.filter((habit: IHabbit) => habit.id !== id);
-  localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updated));
+  const todaySnapshot = await getTodaySnapshot();
+  todaySnapshot.habbits = todaySnapshot.habbits.filter((h) => h.habbitId !== id);
+  await saveDailySnapshot(todaySnapshot);
+  // const habits = JSON.parse(localStorage.getItem("habits") || "[]");
+  // const updated = habits.filter((habit: IHabbit) => habit.id !== id);
+  // localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updated));
+
 };
 
-// Daily snapshots functions
+/**
+ * Daily snapshots functions
+ */
 export const getDailySnapshots = async (): Promise<IDailySnapshot[]> => {
   await fillHistory;
 
@@ -167,8 +174,10 @@ export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
   return todaySnapshot;
 };
 
-// If there are empty days from last snapshot day and today, fill theese days with snapshots
-// so we will understand lates that there were habbits but they were not incremented
+/**
+ * If there are empty days from last snapshot day and today, fill theese days with snapshots
+ * so we will understand lates that there were habbits but they were not incremented
+ */
 export const fillHistory = async (): Promise<void> => {
   // create todays snapshot to be sure it is created
   await getTodaySnapshot();
@@ -206,7 +215,9 @@ export const fillHistory = async (): Promise<void> => {
   }
 };
 
-// Helper function to get current need count for a habit
+/**
+ * Helper function to get current need count for a habit
+ */
 export const getCurrentNeedCount = async (habitId: string): Promise<number> => {
   const todaySnapshot = await getTodaySnapshot();
 
@@ -214,7 +225,9 @@ export const getCurrentNeedCount = async (habitId: string): Promise<number> => {
   return habit?.habbitNeedCount || 1;
 };
 
-// Helper function to get current actual count for a habit
+/**
+ * Helper function to get current actual count for a habit
+ */
 export const getCurrentActualCount = async (
   habitId: string
 ): Promise<number> => {
@@ -224,7 +237,9 @@ export const getCurrentActualCount = async (
   return habit?.habbitDidCount || 0;
 };
 
-// Update habit count in today's snapshot
+/**
+ * Update habit count in today's snapshot
+ */
 export const updateHabitCount = async (
   habitId: string,
   newCount: number
@@ -247,7 +262,9 @@ export const updateHabitCount = async (
   }
 };
 
-// Update habit need count in today's snapshot
+/**
+ * Update habit need count in today's snapshot
+ */
 export const updateHabitNeedCount = async (
   habitId: string,
   newNeedCount: number

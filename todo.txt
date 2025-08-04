@@ -2,7 +2,6 @@ Focus on new habbit text field on add habbit button click
 Add animation on add habbit button click
 add habbit text existance check
 Add paddinds for modal on mobile
-Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
 dont use resetedHabbits.forEach(habbit => updateHabit(habbit)); create update all habbits method
 "Updated habbit" is in console output when habbit is 5/5 and i click to check mark instead of plus button
 add + and - buttons for mobile number input
@@ -12,6 +11,10 @@ use functions like updateHabitNeedCount instead of modifying todaySnapshots
 
 highlight "Hello" on welcome screen
 
+Use css modules / styled components
+Use react lists
+Use MobX
+Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
 Use json server and dont use client components where it is possible
 create type for date
 add google sheets integration
