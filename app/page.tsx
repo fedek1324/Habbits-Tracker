@@ -74,8 +74,7 @@ export default function Home() {
 
   const handleIncrement = async (id: string) => {
     const habbitDisplayData = habitsDisplayData.find((h) => h.habitId === id);
-    const currentCounts = habbitDisplayData?.actualCount;
-    if (!currentCounts) return;
+    if (!habbitDisplayData) return;
 
     const newActualCount = Math.min(
       habbitDisplayData.needCount,
@@ -83,12 +82,11 @@ export default function Home() {
     );
 
     // Update local state
-    setHabits((prev) => [...prev, {
-      habitId: habbitDisplayData.habitId,
-      text: habbitDisplayData.text,
-      actualCount: newActualCount,
-      needCount: habbitDisplayData.needCount
-    }]);
+    setHabits((prev) => prev.map((h) => 
+      h.habitId === id 
+        ? { ...h, actualCount: newActualCount }
+        : h
+    ));
 
     // Update in snapshot
     await updateHabitCount(id, newActualCount);
