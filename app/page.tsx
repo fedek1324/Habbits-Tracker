@@ -111,8 +111,8 @@ export default function Home() {
       actualCount: newActualCount || 0
     } : h)));
 
-    updateHabitCount(habbit.id, newActualCount || 0);
-    updateHabitNeedCount(habbit.id, newNeedCount || 1);
+    await updateHabitCount(habbit.id, newActualCount || 0);
+    await updateHabitNeedCount(habbit.id, newNeedCount || 1);
 
     // Update habit info
     await updateHabit(habbit);
