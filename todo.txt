@@ -11,10 +11,10 @@ use functions like updateHabitNeedCount instead of modifying todaySnapshots
 
 highlight "Hello" on welcome screen
 
+Use Redux
+Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
 Use css modules / styled components
 Use react lists
-Use MobX
-Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
-Use json server and dont use client components where it is possible
-create type for date
 add google sheets integration
+create type for date
+Use json server and dont use client components where it is possible

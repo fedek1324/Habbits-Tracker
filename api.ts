@@ -86,9 +86,7 @@ export const deleteHabbit = async (id: string): Promise<void> => {
 /**
  * Daily snapshots functions
  */
-export const getDailySnapshots = async (): Promise<IDailySnapshot[]> => {
-  await fillHistory;
-
+const getDailySnapshotsRaw = async (): Promise<IDailySnapshot[]> => {
   try {
     const snapshotsJson = localStorage.getItem(DAILY_SNAPSHOTS_STORAGE_KEY);
     return snapshotsJson ? JSON.parse(snapshotsJson) : [];
@@ -98,27 +96,38 @@ export const getDailySnapshots = async (): Promise<IDailySnapshot[]> => {
   }
 };
 
+export const getDailySnapshots = async (): Promise<IDailySnapshot[]> => {
+  await fillHistory();
+  return getDailySnapshotsRaw();
+};
+
 export const saveDailySnapshot = async (
   snapshot: IDailySnapshot
 ): Promise<boolean> => {
   try {
-    const existingSnapshots = await getDailySnapshots();
+    const existingSnapshots = await getDailySnapshotsRaw();
 
-    // instert at proper position
-    for (let i = 0; i < existingSnapshots.length; i++) {
-      const element = existingSnapshots[i];
-      let isSameDay = element.date === snapshot.date;
-      let isAfterSnapshot = new Date(element.date) > new Date(snapshot.date);
-      let isLastElement = i === existingSnapshots.length - 1;
-      if (isSameDay) {
-        existingSnapshots[i] = snapshot;
-        break;
-      } else if (isAfterSnapshot) {
-        existingSnapshots.splice(i, 0, snapshot);
-        break;
-      } else if (isLastElement) {
-        existingSnapshots.push(snapshot);
-        break;
+    // If no existing snapshots, just add the first one
+    if (existingSnapshots.length === 0) {
+      existingSnapshots.push(snapshot);
+    } else {
+      // Insert at proper position
+      for (let i = 0; i < existingSnapshots.length; i++) {
+        const element = existingSnapshots[i];
+        let isSameDay = element.date === snapshot.date;
+        let isAfterSnapshot = new Date(element.date) > new Date(snapshot.date);
+        let isLastElement = i === existingSnapshots.length - 1;
+        
+        if (isSameDay) {
+          existingSnapshots[i] = snapshot;
+          break;
+        } else if (isAfterSnapshot) {
+          existingSnapshots.splice(i, 0, snapshot);
+          break;
+        } else if (isLastElement) {
+          existingSnapshots.push(snapshot);
+          break;
+        }
       }
     }
 
@@ -135,40 +144,35 @@ export const saveDailySnapshot = async (
 
 export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
   const today = new Date().toISOString().split("T")[0];
-  const snapshots = await getDailySnapshots();
+  const snapshots = await getDailySnapshotsRaw();
   let todaySnapshot = snapshots.find((s) => s.date === today);
 
   if (!todaySnapshot) {
     // Create today's snapshot if it doesn't exist
-    const habits = await getHabits();
-    const snapshots = await getDailySnapshots();
-
     if (snapshots.length === 0) {
-      return {
+      // No previous snapshots - create empty snapshot that will be populated when habits are added
+      todaySnapshot = {
         date: today,
-        habbits: habits.map((h) => ({
-          habbitId: h.id,
-          habbitNeedCount: 1,
+        habbits: [],
+      };
+    } else {
+      // Get previous day's snapshot and reset counts to 0
+      const previousSnapshot = snapshots.sort((a, b) =>
+        b.date.localeCompare(a.date)
+      )[0];
+
+      todaySnapshot = {
+        date: today,
+        habbits: previousSnapshot.habbits.map((h) => ({
+          habbitId: h.habbitId,
+          habbitNeedCount: h.habbitNeedCount,
           habbitDidCount: 0,
         })),
       };
     }
-
-    // Get previous day's need counts or use default
-    const previousSnapshot = snapshots.sort((a, b) =>
-      b.date.localeCompare(a.date)
-    )[0];
-
-    todaySnapshot = {
-      date: today,
-      habbits: previousSnapshot.habbits.map((h) => {
-        return {
-          habbitId: h.habbitId,
-          habbitNeedCount: h.habbitNeedCount,
-          habbitDidCount: 0,
-        };
-      }),
-    };
+    
+    // Save the new snapshot
+    await saveDailySnapshot(todaySnapshot);
   }
 
   return todaySnapshot;
@@ -185,7 +189,7 @@ export const fillHistory = async (): Promise<void> => {
   // todat with time 00.00.00 for correct currentDate < today compare
   const today = new Date(new Date().toISOString().split("T")[0]);
   let previousSnapshot;
-  const snapshots = await getDailySnapshots();
+  const snapshots = await getDailySnapshotsRaw();
 
   if (snapshots.length > 1) {
     previousSnapshot = snapshots.sort((a, b) =>

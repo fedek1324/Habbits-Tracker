@@ -52,6 +52,9 @@ export default function Home() {
   }, []);
 
   const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
+    await addHabit(newHabbit);
+
+    // Update local state
     setHabits((prev) => [...prev, {
       habitId: newHabbit.id,
       text: newHabbit.text,
@@ -68,8 +71,6 @@ export default function Home() {
       habbitDidCount: 0,
     });
     await saveDailySnapshot(todaySnapshot);
-
-    await addHabit(newHabbit);
   };
 
   const handleIncrement = async (id: string) => {
