@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
-// import IntegrationPannel from "./components/IntegrationPannel";
+import IntegrationPannel from "./components/IntegrationPannel";
 import BottomNavigation from "./components/BottomNavigation";
 import HistoryView from "./components/HistoryView";
 import {
@@ -17,6 +17,7 @@ import {
   updateHabitNeedCount,
 } from "@/api";
 import IHabbit from "@/types/habbit";
+import User from "@/types/user";
 
 type DispalyHabbit = {
   habitId: string,
@@ -27,7 +28,7 @@ type DispalyHabbit = {
 
 export default function Home() {
   const [habitsDisplayData, setHabits] = useState<Array<DispalyHabbit>>([]);
-  // const [currentUser, setCurrentUser] = useState(undefined);
+  const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
 
   useEffect(() => {
@@ -132,9 +133,9 @@ export default function Home() {
               </h1>
 
               {/*Google integration panel */}
-              {/*<div className="mb-4">
-                <IntegrationPannel currentUser={currentUser} />
-              </div>*/}
+              <div className="mb-4">
+                <IntegrationPannel currentUser={currentUser} onChangeUser={setCurrentUser} />
+              </div>
 
               {/* Habbits list */}
               {habitsDisplayData.length > 0 && (

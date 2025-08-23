@@ -13,6 +13,7 @@ highlight "Hello" on welcome screen
 
 Use Redux
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
+add tests
 Use css modules / styled components
 Use react lists
 add google sheets integration
