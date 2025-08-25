@@ -195,8 +195,172 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       }
 
       console.log(`✅ Successfully populated ${rows.length} rows with ${habitNamesArray.length} habit columns`);
+      
+      // Format the spreadsheet beautifully
+      await formatSpreadsheet(accessToken, spreadsheetId, habitNamesArray.length, rows.length);
+      
     } catch (error) {
       console.error("❌ Error populating spreadsheet with habits:", error);
+    }
+  };
+
+  const formatSpreadsheet = async (accessToken: string, spreadsheetId: string, numHabitColumns: number, numDataRows: number) => {
+    try {
+      console.log("Applying beautiful formatting to spreadsheet...");
+      
+      // Get the spreadsheet to find the correct sheet ID
+      const spreadsheetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!spreadsheetResponse.ok) {
+        throw new Error(`Failed to get spreadsheet details: ${spreadsheetResponse.statusText}`);
+      }
+      
+      const spreadsheetData = await spreadsheetResponse.json();
+      const sheetId = spreadsheetData.sheets[0].properties.sheetId;
+      console.log("Using sheet ID:", sheetId);
+      
+      const requests = [
+        // Format header row
+        {
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 0,
+              endRowIndex: 1,
+              startColumnIndex: 0,
+              endColumnIndex: numHabitColumns + 1
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 0.2, green: 0.4, blue: 0.8 },
+                textFormat: {
+                  foregroundColor: { red: 1, green: 1, blue: 1 },
+                  fontSize: 12,
+                  bold: true
+                },
+                horizontalAlignment: 'CENTER',
+                verticalAlignment: 'MIDDLE'
+              }
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
+          }
+        },
+        // Format date column
+        {
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 1,
+              endRowIndex: numDataRows + 1,
+              startColumnIndex: 0,
+              endColumnIndex: 1
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 0.95, green: 0.95, blue: 0.95 },
+                textFormat: {
+                  fontSize: 10,
+                  bold: true
+                },
+                horizontalAlignment: 'CENTER',
+                verticalAlignment: 'MIDDLE'
+              }
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)'
+          }
+        },
+        // Format habit data columns
+        {
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 1,
+              endRowIndex: numDataRows + 1,
+              startColumnIndex: 1,
+              endColumnIndex: numHabitColumns + 1
+            },
+            cell: {
+              userEnteredFormat: {
+                textFormat: {
+                  fontSize: 10
+                },
+                horizontalAlignment: 'CENTER',
+                verticalAlignment: 'MIDDLE'
+              }
+            },
+            fields: 'userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment)'
+          }
+        },
+        // Add borders
+        {
+          updateBorders: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 0,
+              endRowIndex: numDataRows + 1,
+              startColumnIndex: 0,
+              endColumnIndex: numHabitColumns + 1
+            },
+            top: { style: 'SOLID', width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            bottom: { style: 'SOLID', width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            left: { style: 'SOLID', width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            right: { style: 'SOLID', width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            innerHorizontal: { style: 'SOLID', width: 1, color: { red: 0.9, green: 0.9, blue: 0.9 } },
+            innerVertical: { style: 'SOLID', width: 1, color: { red: 0.9, green: 0.9, blue: 0.9 } }
+          }
+        },
+        // Auto-resize columns
+        {
+          autoResizeDimensions: {
+            dimensions: {
+              sheetId: sheetId,
+              dimension: 'COLUMNS',
+              startIndex: 0,
+              endIndex: numHabitColumns + 1
+            }
+          }
+        },
+        // Freeze first row and first column
+        {
+          updateSheetProperties: {
+            properties: {
+              sheetId: sheetId,
+              gridProperties: {
+                frozenRowCount: 1,
+                frozenColumnCount: 1
+              }
+            },
+            fields: 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount'
+          }
+        }
+      ];
+
+      console.log("Formatting request:", JSON.stringify({ requests: requests }, null, 2));
+
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requests: requests
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("Formatting error details:", errorBody);
+        throw new Error(`Failed to format spreadsheet: ${response.statusText} - ${errorBody}`);
+      }
+
+      console.log("✅ Beautiful formatting applied successfully");
+    } catch (error) {
+      console.error("❌ Error formatting spreadsheet:", error);
     }
   };
 
