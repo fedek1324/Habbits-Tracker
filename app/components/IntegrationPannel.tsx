@@ -1,4 +1,6 @@
 import User from "@/types/user";
+import { useGoogleLogin } from "@react-oauth/google";
+import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
 
 interface IntegrationPannelProps {
   currentUser: User | undefined;
@@ -6,12 +8,42 @@ interface IntegrationPannelProps {
 }
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
-  currentUser, onChangeUser
+  currentUser,
+  onChangeUser,
 }) => {
-  function handleConnectClick() {
-    
-  }
+  const SCOPES =
+    "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      console.log("Login successful:", tokenResponse);
+      
+      // Check if all required scopes have been granted
+      const hasAccess = hasGrantedAllScopesGoogle(
+        tokenResponse,
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive.file"
+      );
+      
+      console.log("Has all required scopes granted:", hasAccess);
+      
+      if (hasAccess) {
+        console.log("✅ All scopes granted - can proceed with Google Sheets integration");
+        // Update user state or perform other actions
+        onChangeUser({ key: tokenResponse.access_token });
+      } else {
+        console.log("❌ Not all scopes granted - user needs to grant additional permissions");
+      }
+    },
+    onError: (error) => {
+      console.error("Login failed:", error);
+    },
+    scope: SCOPES,
+  });
+
+  function handleConnectClick() {
+    login();
+  }
 
   return (
     <div>
@@ -161,7 +193,10 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
             <p className="text-sm text-gray-600 mb-4">
               Connect Google Sheets to automatically sync your habits history
             </p>
-            <button onClick={handleConnectClick} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            <button
+              onClick={handleConnectClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+            >
               <svg
                 className="w-4 h-4"
                 fill="none"
