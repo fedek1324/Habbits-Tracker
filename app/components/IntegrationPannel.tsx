@@ -2,6 +2,8 @@ import User from "@/types/user";
 import { useGoogleLogin } from "@react-oauth/google";
 import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
 import { useState } from "react";
+import { getHabits, getDailySnapshots } from "@/api";
+import IHabbit from "@/types/habbit";
 
 interface IntegrationPannelProps {
   currentUser: User | undefined;
@@ -51,8 +53,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("📝 Spreadsheet ID:", spreadsheet.spreadsheetId);
       console.log("🔗 Spreadsheet URL:", spreadsheet.spreadsheetUrl);
 
-      // Set up the header row with habit data structure
-      await setupSpreadsheetHeaders(accessToken, spreadsheet.spreadsheetId);
+      // Populate with existing habits data (this will also set up headers)
+      await populateSpreadsheetWithHabits(accessToken, spreadsheet.spreadsheetId);
       
       // Save the spreadsheet URL to state
       setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
@@ -65,15 +67,15 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     }
   };
 
-  const setupSpreadsheetHeaders = async (accessToken: string, spreadsheetId: string) => {
+  const setupSpreadsheetHeaders = async (accessToken: string, spreadsheetId: string, habitNames: string[]) => {
     try {
       console.log("Setting up spreadsheet headers...");
       
-      const headers = [
-        ['Date', 'Habit Name', 'Target Count', 'Actual Count', 'Completed', 'Notes']
-      ];
+      // Create headers: Date + each habit name
+      const headers = [['Date', ...habitNames]];
 
-      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:F1?valueInputOption=USER_ENTERED`, {
+      const columnRange = String.fromCharCode(65 + habitNames.length); // A=65, so A+habitNames.length gives us the end column
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:${columnRange}1?valueInputOption=USER_ENTERED`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -91,6 +93,110 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("✅ Headers set up successfully");
     } catch (error) {
       console.error("❌ Error setting up headers:", error);
+    }
+  };
+
+  const populateSpreadsheetWithHabits = async (accessToken: string, spreadsheetId: string) => {
+    try {
+      console.log("Populating spreadsheet with habits data...");
+      
+      // Get daily snapshots (historical data) and habits (for names)
+      const [snapshots, habits] = await Promise.all([
+        getDailySnapshots(),
+        getHabits()
+      ]);
+      
+      console.log("Found snapshots:", snapshots.length);
+      console.log("Found habits:", habits.length);
+      
+      if (snapshots.length === 0) {
+        console.log("No historical data found to populate");
+        return;
+      }
+
+      // Get all unique habit names and create a mapping
+      const habitIdToName = new Map<string, string>();
+      habits.forEach(habit => {
+        habitIdToName.set(habit.id, habit.text);
+      });
+
+      // Get all unique habit names from snapshots (in case there are deleted habits)
+      const allHabitNames = new Set<string>();
+      snapshots.forEach(snapshot => {
+        snapshot.habbits.forEach(habitSnapshot => {
+          const habitName = habitIdToName.get(habitSnapshot.habbitId) || "Unknown Habit";
+          allHabitNames.add(habitName);
+        });
+      });
+
+      const habitNamesArray = Array.from(allHabitNames).sort();
+      console.log("Habit columns:", habitNamesArray);
+
+      // Set up headers first
+      await setupSpreadsheetHeaders(accessToken, spreadsheetId, habitNamesArray);
+
+      // Create a data structure: Map<date, Map<habitName, progress>>
+      const dateData = new Map<string, Map<string, string>>();
+
+      snapshots.forEach((snapshot) => {
+        if (!dateData.has(snapshot.date)) {
+          dateData.set(snapshot.date, new Map());
+        }
+        
+        const dayData = dateData.get(snapshot.date)!;
+        
+        snapshot.habbits.forEach((habitSnapshot) => {
+          const habitName = habitIdToName.get(habitSnapshot.habbitId) || "Unknown Habit";
+          // Show progress as "actual/target" format
+          const progress = `${habitSnapshot.habbitDidCount}/${habitSnapshot.habbitNeedCount}`;
+          dayData.set(habitName, progress);
+        });
+      });
+
+      // Convert to rows for the spreadsheet
+      const rows: string[][] = [];
+      const sortedDates = Array.from(dateData.keys()).sort();
+
+      sortedDates.forEach(date => {
+        const row = [date];
+        const dayData = dateData.get(date)!;
+        
+        // Add data for each habit column (in same order as headers)
+        habitNamesArray.forEach(habitName => {
+          row.push(dayData.get(habitName) || ""); // Empty if no data for this habit on this date
+        });
+        
+        rows.push(row);
+      });
+
+      if (rows.length === 0) {
+        console.log("No habit data to populate");
+        return;
+      }
+
+      // Calculate the column range
+      const endColumn = String.fromCharCode(65 + habitNamesArray.length); // A + number of habits
+      const endRow = rows.length + 1; // +1 for header row
+
+      // Write data to spreadsheet starting from row 2 (after headers)
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A2:${endColumn}${endRow}?valueInputOption=USER_ENTERED`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          values: rows,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to populate data: ${response.statusText}`);
+      }
+
+      console.log(`✅ Successfully populated ${rows.length} rows with ${habitNamesArray.length} habit columns`);
+    } catch (error) {
+      console.error("❌ Error populating spreadsheet with habits:", error);
     }
   };
 
