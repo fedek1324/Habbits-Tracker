@@ -1,9 +1,8 @@
 import User from "@/types/user";
 import { useGoogleLogin } from "@react-oauth/google";
 import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { getHabits, getDailySnapshots } from "@/api";
-import IHabbit from "@/types/habbit";
 
 interface IntegrationPannelProps {
   currentUser: User | undefined;
@@ -14,18 +13,76 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   currentUser,
   onChangeUser,
 }) => {
+  console.log("IntegrationPannel: Component rendering");
+  
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(null);
+  const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [isCreatingSpreadsheet, setIsCreatingSpreadsheet] = useState(false);
+  const [isUpdatingSpreadsheet, setIsUpdatingSpreadsheet] = useState(false);
+  
+  console.log("IntegrationPannel: State initialized");
   
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 
-  const createHabitsSpreadsheet = async (accessToken: string) => {
+  // Load existing spreadsheet info from localStorage on component mount
+  useEffect(() => {
+    console.log("IntegrationPannel: useEffect running");
     try {
+      const savedSpreadsheetId = localStorage.getItem('habitsSpreadsheetId');
+      const savedSpreadsheetUrl = localStorage.getItem('habitsSpreadsheetUrl');
+      console.log("Saved spreadsheet ID:", savedSpreadsheetId);
+      console.log("Saved spreadsheet URL:", savedSpreadsheetUrl);
+      if (savedSpreadsheetId && savedSpreadsheetUrl) {
+        setSpreadsheetId(savedSpreadsheetId);
+        setSpreadsheetUrl(savedSpreadsheetUrl);
+      }
+      console.log("IntegrationPannel: useEffect completed");
+    } catch (error) {
+      console.error("Error in useEffect:", error);
+    }
+  }, []);
+
+  // Save spreadsheet info to localStorage
+  const saveSpreadsheetInfo = (id: string, url: string) => {
+    localStorage.setItem('habitsSpreadsheetId', id);
+    localStorage.setItem('habitsSpreadsheetUrl', url);
+    setSpreadsheetId(id);
+    setSpreadsheetUrl(url);
+  };
+
+  // Clear spreadsheet info from localStorage
+  const clearSpreadsheetInfo = () => {
+    localStorage.removeItem('habitsSpreadsheetId');
+    localStorage.removeItem('habitsSpreadsheetUrl');
+    setSpreadsheetId(null);
+    setSpreadsheetUrl(null);
+  };
+
+  const syncWithGoogleSheets = async (accessToken: string) => {
+    try {
+      // Check if we have an existing spreadsheet
+      if (spreadsheetId) {
+        console.log("Updating existing spreadsheet:", spreadsheetId);
+        setIsUpdatingSpreadsheet(true);
+        
+        // Try to update the existing spreadsheet
+        try {
+          await populateSpreadsheetWithHabits(accessToken, spreadsheetId, true);
+          console.log("✅ Successfully updated existing spreadsheet");
+          setIsUpdatingSpreadsheet(false);
+          return { spreadsheetId, spreadsheetUrl };
+        } catch (updateError) {
+          console.warn("⚠️ Failed to update existing spreadsheet, creating new one:", updateError);
+          // Clear the invalid spreadsheet info and create a new one
+          clearSpreadsheetInfo();
+        }
+      }
+      
+      // Create a new spreadsheet
       setIsCreatingSpreadsheet(true);
       console.log("Creating new habits spreadsheet...");
       
-      // Create a new spreadsheet
       const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
         method: 'POST',
         headers: {
@@ -54,16 +111,18 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("🔗 Spreadsheet URL:", spreadsheet.spreadsheetUrl);
 
       // Populate with existing habits data (this will also set up headers)
-      await populateSpreadsheetWithHabits(accessToken, spreadsheet.spreadsheetId);
+      await populateSpreadsheetWithHabits(accessToken, spreadsheet.spreadsheetId, false);
       
-      // Save the spreadsheet URL to state
-      setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
+      // Save the spreadsheet info
+      saveSpreadsheetInfo(spreadsheet.spreadsheetId, spreadsheet.spreadsheetUrl);
       setIsCreatingSpreadsheet(false);
+      setIsUpdatingSpreadsheet(false);
       
       return spreadsheet;
     } catch (error) {
-      console.error("❌ Error creating spreadsheet:", error);
+      console.error("❌ Error syncing with Google Sheets:", error);
       setIsCreatingSpreadsheet(false);
+      setIsUpdatingSpreadsheet(false);
     }
   };
 
@@ -96,9 +155,64 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     }
   };
 
-  const populateSpreadsheetWithHabits = async (accessToken: string, spreadsheetId: string) => {
+  const clearSpreadsheetData = async (accessToken: string, spreadsheetId: string) => {
     try {
-      console.log("Populating spreadsheet with habits data...");
+      console.log("Clearing existing spreadsheet data...");
+      
+      // Get the spreadsheet to find the sheet dimensions
+      const spreadsheetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!spreadsheetResponse.ok) {
+        throw new Error(`Failed to get spreadsheet details: ${spreadsheetResponse.statusText}`);
+      }
+      
+      const spreadsheetData = await spreadsheetResponse.json();
+      const sheet = spreadsheetData.sheets[0];
+      const sheetId = sheet.properties.sheetId;
+      
+      // Clear all data by deleting rows (keeping headers)
+      const requests = [{
+        deleteDimension: {
+          range: {
+            sheetId: sheetId,
+            dimension: 'ROWS',
+            startIndex: 1, // Start from row 2 (0-indexed), keep header row
+          }
+        }
+      }];
+      
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requests }),
+      });
+      
+      if (!response.ok) {
+        // If clearing fails, it might be because there are no data rows, which is fine
+        console.log("Note: Could not clear data (might be empty already)");
+      } else {
+        console.log("✅ Existing data cleared successfully");
+      }
+    } catch (error) {
+      console.warn("⚠️ Error clearing existing data (proceeding anyway):", error);
+    }
+  };
+
+  const populateSpreadsheetWithHabits = async (accessToken: string, spreadsheetId: string, isUpdate = false) => {
+    try {
+      console.log(isUpdate ? "Updating spreadsheet with latest habits data..." : "Populating spreadsheet with habits data...");
+      
+      // If this is an update, clear existing data first
+      if (isUpdate) {
+        await clearSpreadsheetData(accessToken, spreadsheetId);
+      }
       
       // Get daily snapshots (historical data) and habits (for names)
       const [snapshots, habits] = await Promise.all([
@@ -381,8 +495,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         console.log("✅ All scopes granted - can proceed with Google Sheets integration");
         // Update user state with access token
         onChangeUser({ key: tokenResponse.access_token });
-        // Create a new spreadsheet after successful login
-        createHabitsSpreadsheet(tokenResponse.access_token);
+        // Sync with Google Sheets after successful login
+        syncWithGoogleSheets(tokenResponse.access_token);
       } else {
         console.log("❌ Not all scopes granted - user needs to grant additional permissions");
       }
@@ -516,8 +630,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
         {/* <!-- Not Connected State --> */}
 
-        {/* Creating Spreadsheet State */}
-        {isCreatingSpreadsheet && (
+        {/* Creating/Updating Spreadsheet State */}
+        {(isCreatingSpreadsheet || isUpdatingSpreadsheet) && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -545,13 +659,13 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              Creating your habits spreadsheet...
+              {isCreatingSpreadsheet ? 'Creating your habits spreadsheet...' : 'Updating your habits spreadsheet...'}
             </p>
           </div>
         )}
 
         {/* Connected State with Spreadsheet */}
-        {currentUser && spreadsheetUrl && !isCreatingSpreadsheet && (
+        {currentUser && spreadsheetUrl && !isCreatingSpreadsheet && !isUpdatingSpreadsheet && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -589,7 +703,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
                   clipRule="evenodd"
                 />
               </svg>
-              Connected and spreadsheet ready
+              {spreadsheetId ? 'Connected to existing spreadsheet' : 'Connected and spreadsheet ready'}
             </p>
             <div className="flex gap-2">
               <button 
@@ -600,8 +714,18 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
               </button>
               <button 
                 onClick={() => {
+                  if (currentUser?.key) {
+                    syncWithGoogleSheets(currentUser.key);
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+              >
+                Sync Now
+              </button>
+              <button 
+                onClick={() => {
                   onChangeUser({ key: "" });
-                  setSpreadsheetUrl(null);
+                  clearSpreadsheetInfo();
                 }}
                 className="bg-white hover:bg-gray-50 text-green-600 text-sm px-4 py-2 rounded-lg font-medium border border-green-200 transition-colors duration-200"
               >
@@ -612,7 +736,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         )}
 
         {/* Not Connected State */}
-        {currentUser === undefined && !isCreatingSpreadsheet && (
+        {currentUser === undefined && !isCreatingSpreadsheet && !isUpdatingSpreadsheet && (
           <div className="bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <svg className="w-6 h-6 opacity-50" viewBox="0 0 24 24">
