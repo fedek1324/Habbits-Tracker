@@ -2,7 +2,9 @@ import User from "@/types/user";
 import { useGoogleLogin } from "@react-oauth/google";
 import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
 import React, { useState, useEffect } from "react";
-import { getHabits, getDailySnapshots } from "@/api";
+import { getHabits, getDailySnapshots, addHabit, saveDailySnapshot } from "@/api";
+import IHabbit from "@/types/habbit";
+import IDailySnapshot from "@/types/dailySnapshot";
 
 interface IntegrationPannelProps {
   currentUser: User | undefined;
@@ -24,71 +26,100 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
+  
+  const SPREADSHEET_NAME = "My habits tracker";
 
-  // Load existing spreadsheet info from localStorage on component mount
+  // Component initialization
   useEffect(() => {
-    console.log("IntegrationPannel: useEffect running");
-    try {
-      const savedSpreadsheetId = localStorage.getItem('habitsSpreadsheetId');
-      const savedSpreadsheetUrl = localStorage.getItem('habitsSpreadsheetUrl');
-      console.log("Saved spreadsheet ID:", savedSpreadsheetId);
-      console.log("Saved spreadsheet URL:", savedSpreadsheetUrl);
-      if (savedSpreadsheetId && savedSpreadsheetUrl) {
-        setSpreadsheetId(savedSpreadsheetId);
-        setSpreadsheetUrl(savedSpreadsheetUrl);
-      }
-      console.log("IntegrationPannel: useEffect completed");
-    } catch (error) {
-      console.error("Error in useEffect:", error);
-    }
+    console.log("IntegrationPannel: Component initialized");
   }, []);
 
-  // Save spreadsheet info to localStorage
-  const saveSpreadsheetInfo = (id: string, url: string) => {
-    localStorage.setItem('habitsSpreadsheetId', id);
-    localStorage.setItem('habitsSpreadsheetUrl', url);
-    setSpreadsheetId(id);
-    setSpreadsheetUrl(url);
-  };
-
-  // Clear spreadsheet info from localStorage
+  // Clear spreadsheet info from state
   const clearSpreadsheetInfo = () => {
-    localStorage.removeItem('habitsSpreadsheetId');
-    localStorage.removeItem('habitsSpreadsheetUrl');
     setSpreadsheetId(null);
     setSpreadsheetUrl(null);
   };
 
+  const findSpreadsheetByName = async (accessToken: string, name: string) => {
+    try {
+      console.log(`Searching for spreadsheet named: "${name}"`);
+      
+      // Search for spreadsheets with the specific name
+      const searchResponse = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(name)}' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name,webViewLink)`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+      
+      if (!searchResponse.ok) {
+        throw new Error(`Failed to search for spreadsheet: ${searchResponse.status}`);
+      }
+      
+      const searchData = await searchResponse.json();
+      const files = searchData.files;
+      
+      if (files && files.length > 0) {
+        // If multiple spreadsheets with same name exist, take the first one
+        const spreadsheet = files[0];
+        console.log(`✅ Found existing spreadsheet: ${spreadsheet.name} (ID: ${spreadsheet.id})`);
+        return {
+          id: spreadsheet.id,
+          url: spreadsheet.webViewLink
+        };
+      } else {
+        console.log(`No spreadsheet found with name: "${name}"`);
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error searching for spreadsheet:", error);
+      return null;
+    }
+  };
+
   const syncWithGoogleSheets = async (accessToken: string) => {
     try {
-      // Check if we have an existing spreadsheet
-      if (spreadsheetId) {
-        console.log("Updating existing spreadsheet:", spreadsheetId);
+      // Search for existing spreadsheet by name
+      console.log(`Looking for spreadsheet named: "${SPREADSHEET_NAME}"`);
+      const existingSpreadsheet = await findSpreadsheetByName(accessToken, SPREADSHEET_NAME);
+      
+      if (existingSpreadsheet) {
+        console.log("Found existing spreadsheet:", existingSpreadsheet.id);
         setIsUpdatingSpreadsheet(true);
         
-        // First, check if the spreadsheet still exists by trying to get its metadata
-        try {
-          const checkResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-            },
-          });
+        // Update state with found spreadsheet info
+        setSpreadsheetId(existingSpreadsheet.id);
+        setSpreadsheetUrl(existingSpreadsheet.url);
+        
+        // Check if local storage has any habits data
+        const existingHabits = await getHabits();
+        const existingSnapshots = await getDailySnapshots();
+        
+        if (existingHabits.length === 0 && existingSnapshots.length === 0) {
+          // No local data - try to read and import from existing spreadsheet
+          console.log("No local habits found, attempting to import from existing spreadsheet...");
+          const spreadsheetData = await readExistingSpreadsheetData(accessToken, existingSpreadsheet.id);
           
-          if (!checkResponse.ok) {
-            throw new Error(`Spreadsheet not found: ${checkResponse.status}`);
+          if (spreadsheetData && spreadsheetData.dataRows.length > 0) {
+            console.log("Found data in existing spreadsheet, importing...");
+            const parsedData = await parseSpreadsheetDataToHabits(spreadsheetData);
+            
+            if (parsedData.habits.length > 0) {
+              await initializeHabitsFromSpreadsheet(parsedData.habits, parsedData.snapshots);
+              console.log("✅ Successfully imported data from existing spreadsheet");
+              setIsUpdatingSpreadsheet(false);
+              return { spreadsheetId: existingSpreadsheet.id, spreadsheetUrl: existingSpreadsheet.url };
+            }
           }
-          
-          // If spreadsheet exists, update it
-          await populateSpreadsheetWithHabits(accessToken, spreadsheetId, true);
-          console.log("✅ Successfully updated existing spreadsheet");
-          setIsUpdatingSpreadsheet(false);
-          return { spreadsheetId, spreadsheetUrl };
-        } catch (updateError) {
-          console.warn("⚠️ Failed to update existing spreadsheet, creating new one:", updateError);
-          // Clear the invalid spreadsheet info and create a new one
-          clearSpreadsheetInfo();
-          setIsUpdatingSpreadsheet(false);
         }
+        
+        // If spreadsheet exists and we have local data, update it
+        await populateSpreadsheetWithHabits(accessToken, existingSpreadsheet.id, true);
+        console.log("✅ Successfully updated existing spreadsheet");
+        setIsUpdatingSpreadsheet(false);
+        return { spreadsheetId: existingSpreadsheet.id, spreadsheetUrl: existingSpreadsheet.url };
       }
       
       // Create a new spreadsheet
@@ -103,7 +134,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         },
         body: JSON.stringify({
           properties: {
-            title: "My habits tracker",
+            title: SPREADSHEET_NAME,
           },
           sheets: [{
             properties: {
@@ -125,8 +156,9 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       // Populate with existing habits data (this will also set up headers)
       await populateSpreadsheetWithHabits(accessToken, spreadsheet.spreadsheetId, false);
       
-      // Save the spreadsheet info
-      saveSpreadsheetInfo(spreadsheet.spreadsheetId, spreadsheet.spreadsheetUrl);
+      // Update state with new spreadsheet info
+      setSpreadsheetId(spreadsheet.spreadsheetId);
+      setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
       setIsCreatingSpreadsheet(false);
       setIsUpdatingSpreadsheet(false);
       
@@ -489,6 +521,144 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("✅ Beautiful formatting applied successfully");
     } catch (error) {
       console.error("❌ Error formatting spreadsheet:", error);
+    }
+  };
+
+  const readExistingSpreadsheetData = async (accessToken: string, spreadsheetId: string) => {
+    try {
+      console.log("Reading existing spreadsheet data...");
+      
+      // First get the spreadsheet metadata to find the sheet range
+      const metadataResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!metadataResponse.ok) {
+        throw new Error(`Failed to get spreadsheet metadata: ${metadataResponse.status}`);
+      }
+      
+      const metadata = await metadataResponse.json();
+      const sheet = metadata.sheets[0];
+      const sheetTitle = sheet.properties.title;
+      
+      // Read all data from the sheet
+      const dataResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetTitle}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!dataResponse.ok) {
+        throw new Error(`Failed to read spreadsheet data: ${dataResponse.status}`);
+      }
+      
+      const data = await dataResponse.json();
+      const rows = data.values;
+      
+      if (!rows || rows.length === 0) {
+        console.log("Spreadsheet is empty");
+        return null;
+      }
+      
+      console.log("Successfully read spreadsheet data:", rows.length, "rows");
+      return { headers: rows[0], dataRows: rows.slice(1) };
+      
+    } catch (error) {
+      console.error("❌ Error reading spreadsheet data:", error);
+      return null;
+    }
+  };
+
+  const parseSpreadsheetDataToHabits = async (spreadsheetData: { headers: string[], dataRows: string[][] }) => {
+    try {
+      console.log("Parsing spreadsheet data to habits and snapshots...");
+      
+      const { headers, dataRows } = spreadsheetData;
+      
+      // Extract habit names from headers (skip first column which is "Date")
+      const habitNames = headers.slice(1);
+      console.log("Found habit names:", habitNames);
+      
+      if (habitNames.length === 0) {
+        console.log("No habits found in spreadsheet");
+        return { habits: [], snapshots: [] };
+      }
+      
+      // Create habit objects with unique IDs
+      const habits: IHabbit[] = habitNames.map(name => ({
+        id: crypto.randomUUID(),
+        text: name
+      }));
+      
+      // Create daily snapshots from the data
+      const snapshots: IDailySnapshot[] = [];
+      
+      dataRows.forEach(row => {
+        if (row.length === 0) return; // Skip empty rows
+        
+        const date = row[0];
+        if (!date) return; // Skip rows without date
+        
+        const habitData: Array<{ habbitId: string, habbitNeedCount: number, habbitDidCount: number }> = [];
+        
+        // Parse each habit's progress for this date
+        for (let i = 1; i < row.length && i <= habitNames.length; i++) {
+          const progressStr = row[i];
+          if (!progressStr) continue; // Skip empty cells
+          
+          // Parse "actual/target" format (e.g., "2/3")
+          const progressMatch = progressStr.match(/^(\d+)\/(\d+)$/);
+          if (progressMatch) {
+            const actualCount = parseInt(progressMatch[1]);
+            const targetCount = parseInt(progressMatch[2]);
+            const habitId = habits[i - 1].id; // -1 because habits array doesn't include date column
+            
+            habitData.push({
+              habbitId: habitId,
+              habbitNeedCount: targetCount,
+              habbitDidCount: actualCount
+            });
+          }
+        }
+        
+        if (habitData.length > 0) {
+          snapshots.push({
+            date: date,
+            habbits: habitData
+          });
+        }
+      });
+      
+      console.log(`Parsed ${habits.length} habits and ${snapshots.length} daily snapshots`);
+      return { habits, snapshots };
+      
+    } catch (error) {
+      console.error("❌ Error parsing spreadsheet data:", error);
+      return { habits: [], snapshots: [] };
+    }
+  };
+
+  const initializeHabitsFromSpreadsheet = async (habits: IHabbit[], snapshots: IDailySnapshot[]) => {
+    try {
+      console.log("Initializing habits from spreadsheet data...");
+      
+      // Add all habits to localStorage
+      for (const habit of habits) {
+        await addHabit(habit);
+      }
+      
+      // Add all daily snapshots to localStorage
+      for (const snapshot of snapshots) {
+        await saveDailySnapshot(snapshot);
+      }
+      
+      console.log("✅ Successfully initialized habits from spreadsheet");
+      return true;
+    } catch (error) {
+      console.error("❌ Error initializing habits:", error);
+      return false;
     }
   };
 
