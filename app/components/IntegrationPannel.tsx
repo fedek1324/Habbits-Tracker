@@ -670,6 +670,38 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     }
   };
 
+  const manualSyncToSpreadsheet = async (accessToken: string) => {
+    try {
+      console.log("Manual sync: Pushing local data to spreadsheet...");
+      setIsUpdatingSpreadsheet(true);
+      
+      // Search for existing spreadsheet by name
+      const existingSpreadsheet = await findSpreadsheetByName(accessToken, SPREADSHEET_NAME);
+      
+      if (existingSpreadsheet) {
+        console.log("Found spreadsheet for manual sync:", existingSpreadsheet.id);
+        
+        // Update state with found spreadsheet info
+        setSpreadsheetId(existingSpreadsheet.id);
+        setSpreadsheetUrl(existingSpreadsheet.url);
+        
+        // Push local data to spreadsheet (don't read from spreadsheet)
+        await populateSpreadsheetWithHabits(accessToken, existingSpreadsheet.id, true);
+        console.log("✅ Successfully pushed local data to spreadsheet");
+        
+        setIsUpdatingSpreadsheet(false);
+        return { spreadsheetId: existingSpreadsheet.id, spreadsheetUrl: existingSpreadsheet.url };
+      } else {
+        // If no spreadsheet exists, create one
+        console.log("No spreadsheet found, creating new one for manual sync...");
+        return await syncWithGoogleSheets(accessToken);
+      }
+    } catch (error) {
+      console.error("❌ Error during manual sync:", error);
+      setIsUpdatingSpreadsheet(false);
+    }
+  };
+
   const login = useGoogleLogin({
     onSuccess: (tokenResponse) => {
       console.log("Login successful:", tokenResponse);
@@ -907,7 +939,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
               <button 
                 onClick={() => {
                   if (currentUser?.key) {
-                    syncWithGoogleSheets(currentUser.key);
+                    manualSyncToSpreadsheet(currentUser.key);
                   }
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
