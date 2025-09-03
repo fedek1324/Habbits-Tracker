@@ -66,8 +66,19 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         console.log("Updating existing spreadsheet:", spreadsheetId);
         setIsUpdatingSpreadsheet(true);
         
-        // Try to update the existing spreadsheet
+        // First, check if the spreadsheet still exists by trying to get its metadata
         try {
+          const checkResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          });
+          
+          if (!checkResponse.ok) {
+            throw new Error(`Spreadsheet not found: ${checkResponse.status}`);
+          }
+          
+          // If spreadsheet exists, update it
           await populateSpreadsheetWithHabits(accessToken, spreadsheetId, true);
           console.log("✅ Successfully updated existing spreadsheet");
           setIsUpdatingSpreadsheet(false);
@@ -76,6 +87,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
           console.warn("⚠️ Failed to update existing spreadsheet, creating new one:", updateError);
           // Clear the invalid spreadsheet info and create a new one
           clearSpreadsheetInfo();
+          setIsUpdatingSpreadsheet(false);
         }
       }
       
@@ -91,7 +103,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         },
         body: JSON.stringify({
           properties: {
-            title: `Habits Tracker - ${new Date().toLocaleDateString()}`,
+            title: "My habits tracker",
           },
           sheets: [{
             properties: {
@@ -146,7 +158,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to set headers: ${response.statusText}`);
+        const errorBody = await response.text();
+        throw new Error(`Failed to set headers: ${response.status} ${response.statusText} - ${errorBody}`);
       }
 
       console.log("✅ Headers set up successfully");
@@ -305,7 +318,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to populate data: ${response.statusText}`);
+        const errorBody = await response.text();
+        throw new Error(`Failed to populate data: ${response.status} ${response.statusText} - ${errorBody}`);
       }
 
       console.log(`✅ Successfully populated ${rows.length} rows with ${habitNamesArray.length} habit columns`);
