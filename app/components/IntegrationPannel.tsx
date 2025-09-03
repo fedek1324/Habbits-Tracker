@@ -895,37 +895,26 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("Login successful:", codeResponse);
       const code = codeResponse.code;
 
-      const tokens = await axios.post("http://localhost:3001/auth/google", {
-        // http://localhost:3001/auth/google backend that will exchange the code
+      const tokenResponse = await axios.post("/api/auth/google", {
+        // Next.js API route that will exchange the code
         code,
       });
 
-      console.log(tokens);
-
-      // // Check if all required scopes have been granted
-      // const hasAccess = hasGrantedAllScopesGoogle(
-      //   tokenResponse,
-      //   "https://www.googleapis.com/auth/spreadsheets",
-      //   "https://www.googleapis.com/auth/drive.file"
-      // );
-
-      // console.log("Has all required scopes granted:", hasAccess);
-
-      // if (hasAccess) {
-      //   console.log(
-      //     "✅ All scopes granted - can proceed with Google Sheets integration"
-      //   );
-      //   const expiresInHours = (tokenResponse.expires_in / 3600).toFixed(2);
-      //   console.log("Token expires in: " + expiresInHours + " hours");
-      //   // Update user state with access token
-      //   onChangeUser({ key: tokenResponse.access_token });
-      //   // Sync with Google Sheets after successful login
-      //   syncWithGoogleSheets(tokenResponse.access_token);
-      // } else {
-      //   console.log(
-      //     "❌ Not all scopes granted - user needs to grant additional permissions"
-      //   );
-      // }
+      console.log("Received tokens:", tokenResponse.data);
+      
+      const accessToken = tokenResponse.data.access_token;
+      
+      if (accessToken) {
+        console.log("✅ Access token received - can proceed with Google Sheets integration");
+                
+        // Update user state with access token
+        onChangeUser({ key: accessToken });
+        
+        // Sync with Google Sheets after successful login
+        syncWithGoogleSheets(accessToken);
+      } else {
+        console.log("❌ No access token received");
+      }
     },
     onError: (error) => {
       console.error("Login failed:", error);
