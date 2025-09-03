@@ -31,25 +31,26 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
 
-  useEffect(() => {
-    async function initializeHabits() {
-      let habits: Array<DispalyHabbit> = [];
-      let todaySnapshot = await getTodaySnapshot();
-      const fetchedHabits = await getHabits();
+  // Function to refresh habits data
+  const refreshHabits = async () => {
+    let habits: Array<DispalyHabbit> = [];
+    let todaySnapshot = await getTodaySnapshot();
+    const fetchedHabits = await getHabits();
 
-      for (const habit of todaySnapshot.habbits) {
-        habits.push({
-          habitId: habit.habbitId,
-          text: fetchedHabits.find((h) => h.id === habit.habbitId)?.text || "No text",
-          needCount: habit.habbitNeedCount,
-          actualCount: habit.habbitDidCount
-        });
-      }
-
-      setHabits(habits);
+    for (const habit of todaySnapshot.habbits) {
+      habits.push({
+        habitId: habit.habbitId,
+        text: fetchedHabits.find((h) => h.id === habit.habbitId)?.text || "No text",
+        needCount: habit.habbitNeedCount,
+        actualCount: habit.habbitDidCount
+      });
     }
 
-    initializeHabits();
+    setHabits(habits);
+  };
+
+  useEffect(() => {
+    refreshHabits();
   }, []);
 
   const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
@@ -134,7 +135,11 @@ export default function Home() {
 
               {/*Google integration panel */}
               <div className="mb-4">
-                <IntegrationPannel currentUser={currentUser} onChangeUser={setCurrentUser} />
+                <IntegrationPannel 
+                  currentUser={currentUser} 
+                  onChangeUser={setCurrentUser} 
+                  onDataChanged={refreshHabits}
+                />
               </div>
 
               {/* Habbits list */}

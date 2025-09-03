@@ -9,11 +9,13 @@ import IDailySnapshot from "@/types/dailySnapshot";
 interface IntegrationPannelProps {
   currentUser: User | undefined;
   onChangeUser: (user: User) => void;
+  onDataChanged?: () => void; // Optional callback to notify parent of data changes
 }
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   currentUser,
   onChangeUser,
+  onDataChanged,
 }) => {
   console.log("IntegrationPannel: Component rendering");
   
@@ -93,33 +95,39 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         setSpreadsheetId(existingSpreadsheet.id);
         setSpreadsheetUrl(existingSpreadsheet.url);
         
-        // Check if local storage has any habits data
-        const existingHabits = await getHabits();
-        const existingSnapshots = await getDailySnapshots();
+        // Always read and import data from existing spreadsheet
+        console.log("Reading data from existing spreadsheet to reinitialize local storage...");
+        const spreadsheetData = await readExistingSpreadsheetData(accessToken, existingSpreadsheet.id);
         
-        if (existingHabits.length === 0 && existingSnapshots.length === 0) {
-          // No local data - try to read and import from existing spreadsheet
-          console.log("No local habits found, attempting to import from existing spreadsheet...");
-          const spreadsheetData = await readExistingSpreadsheetData(accessToken, existingSpreadsheet.id);
+        if (spreadsheetData && spreadsheetData.dataRows.length > 0) {
+          console.log("Found data in existing spreadsheet, reinitializing local storage...");
           
-          if (spreadsheetData && spreadsheetData.dataRows.length > 0) {
-            console.log("Found data in existing spreadsheet, importing...");
-            const parsedData = await parseSpreadsheetDataToHabits(spreadsheetData);
+          // Clear existing local data first
+          localStorage.removeItem("habits");
+          localStorage.removeItem("dailySnapshots");
+          
+          const parsedData = await parseSpreadsheetDataToHabits(spreadsheetData);
+          
+          if (parsedData.habits.length > 0) {
+            await initializeHabitsFromSpreadsheet(parsedData.habits, parsedData.snapshots);
+            console.log("✅ Successfully reinitialized habits from existing spreadsheet");
             
-            if (parsedData.habits.length > 0) {
-              await initializeHabitsFromSpreadsheet(parsedData.habits, parsedData.snapshots);
-              console.log("✅ Successfully imported data from existing spreadsheet");
-              setIsUpdatingSpreadsheet(false);
-              return { spreadsheetId: existingSpreadsheet.id, spreadsheetUrl: existingSpreadsheet.url };
+            // Notify parent component that data has changed
+            if (onDataChanged) {
+              onDataChanged();
             }
+            
+            setIsUpdatingSpreadsheet(false);
+            return { spreadsheetId: existingSpreadsheet.id, spreadsheetUrl: existingSpreadsheet.url };
           }
+        } else {
+          console.log("No data found in existing spreadsheet, keeping current local data");
+          // If spreadsheet exists but has no data, update it with local data
+          await populateSpreadsheetWithHabits(accessToken, existingSpreadsheet.id, true);
+          console.log("✅ Successfully updated empty spreadsheet with local data");
+          setIsUpdatingSpreadsheet(false);
+          return { spreadsheetId: existingSpreadsheet.id, spreadsheetUrl: existingSpreadsheet.url };
         }
-        
-        // If spreadsheet exists and we have local data, update it
-        await populateSpreadsheetWithHabits(accessToken, existingSpreadsheet.id, true);
-        console.log("✅ Successfully updated existing spreadsheet");
-        setIsUpdatingSpreadsheet(false);
-        return { spreadsheetId: existingSpreadsheet.id, spreadsheetUrl: existingSpreadsheet.url };
       }
       
       // Create a new spreadsheet
