@@ -30,6 +30,28 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [isCreatingSpreadsheet, setIsCreatingSpreadsheet] = useState(false);
   const [isUpdatingSpreadsheet, setIsUpdatingSpreadsheet] = useState(false);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+
+  // Load refresh token from localStorage on component mount
+  useEffect(() => {
+    const storedRefreshToken = localStorage.getItem('googleRefreshToken');
+    if (storedRefreshToken) {
+      console.log('✅ Found stored refresh token, attempting to get fresh access token...');
+      setRefreshToken(storedRefreshToken);
+      
+      // Automatically try to get a fresh access token
+      refreshAccessToken(storedRefreshToken).then((newAccessToken) => {
+        if (newAccessToken) {
+          console.log('✅ Successfully refreshed access token from stored refresh token');
+          onChangeUser({ key: newAccessToken });
+        } else {
+          console.log('❌ Failed to refresh access token, removing stored refresh token');
+          localStorage.removeItem('googleRefreshToken');
+          setRefreshToken(null);
+        }
+      });
+    }
+  }, []);
 
   console.log("IntegrationPannel: State initialized");
 
@@ -47,6 +69,58 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   const clearSpreadsheetInfo = () => {
     setSpreadsheetId(null);
     setSpreadsheetUrl(null);
+    setRefreshToken(null);
+    localStorage.removeItem('googleRefreshToken');
+  };
+
+  const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
+    try {
+      console.log("Refreshing access token...");
+      const response = await axios.post("/api/auth/google/refresh-token", {
+        refreshToken,
+      });
+
+      if (response.data.access_token) {
+        console.log("✅ Successfully refreshed access token");
+        return response.data.access_token;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("❌ Error refreshing access token:", error);
+      return null;
+    }
+  };
+
+  const makeAuthenticatedRequest = async (
+    url: string,
+    options: RequestInit,
+    accessToken: string,
+    retryCount = 0
+  ): Promise<Response> => {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    // If token expired and we have a refresh token, try to refresh
+    if (response.status === 401 && refreshToken && retryCount === 0) {
+      console.log("Access token expired, attempting to refresh...");
+      const newAccessToken = await refreshAccessToken(refreshToken);
+      
+      if (newAccessToken) {
+        // Update user with new access token
+        onChangeUser({ key: newAccessToken });
+        
+        // Retry the request with new token
+        return makeAuthenticatedRequest(url, options, newAccessToken, 1);
+      }
+    }
+
+    return response;
   };
 
   const findSpreadsheetByName = async (accessToken: string, name: string) => {
@@ -54,15 +128,16 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log(`Searching for spreadsheet named: "${name}"`);
 
       // Search for spreadsheets with the specific name
-      const searchResponse = await fetch(
+      const searchResponse = await makeAuthenticatedRequest(
         `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(
           name
         )}' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name,webViewLink)`,
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }
+        },
+        accessToken
       );
 
       if (!searchResponse.ok) {
@@ -178,12 +253,11 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       setIsCreatingSpreadsheet(true);
       console.log("Creating new habits spreadsheet...");
 
-      const response = await fetch(
+      const response = await makeAuthenticatedRequest(
         "https://sheets.googleapis.com/v4/spreadsheets",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -198,7 +272,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
               },
             ],
           }),
-        }
+        },
+        accessToken
       );
 
       if (!response.ok) {
@@ -243,18 +318,18 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       const headers = [["Date", ...habitNames]];
 
       const columnRange = String.fromCharCode(65 + habitNames.length); // A=65, so A+habitNames.length gives us the end column
-      const response = await fetch(
+      const response = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:${columnRange}1?valueInputOption=USER_ENTERED`,
         {
           method: "PUT",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             values: headers,
           }),
-        }
+        },
+        accessToken
       );
 
       if (!response.ok) {
@@ -278,13 +353,14 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("Clearing existing spreadsheet data...");
 
       // Get the spreadsheet to find the sheet dimensions
-      const spreadsheetResponse = await fetch(
+      const spreadsheetResponse = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }
+        },
+        accessToken
       );
 
       if (!spreadsheetResponse.ok) {
@@ -310,16 +386,16 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         },
       ];
 
-      const response = await fetch(
+      const response = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ requests }),
-        }
+        },
+        accessToken
       );
 
       if (!response.ok) {
@@ -438,18 +514,18 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       const endRow = rows.length + 1; // +1 for header row
 
       // Write data to spreadsheet starting from row 2 (after headers)
-      const response = await fetch(
+      const response = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A2:${endColumn}${endRow}?valueInputOption=USER_ENTERED`,
         {
           method: "PUT",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             values: rows,
           }),
-        }
+        },
+        accessToken
       );
 
       if (!response.ok) {
@@ -485,13 +561,14 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("Applying beautiful formatting to spreadsheet...");
 
       // Get the spreadsheet to find the correct sheet ID
-      const spreadsheetResponse = await fetch(
+      const spreadsheetResponse = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }
+        },
+        accessToken
       );
 
       if (!spreadsheetResponse.ok) {
@@ -653,18 +730,18 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         JSON.stringify({ requests: requests }, null, 2)
       );
 
-      const response = await fetch(
+      const response = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             requests: requests,
           }),
-        }
+        },
+        accessToken
       );
 
       if (!response.ok) {
@@ -689,13 +766,14 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("Reading existing spreadsheet data...");
 
       // First get the spreadsheet metadata to find the sheet range
-      const metadataResponse = await fetch(
+      const metadataResponse = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }
+        },
+        accessToken
       );
 
       if (!metadataResponse.ok) {
@@ -709,13 +787,14 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       const sheetTitle = sheet.properties.title;
 
       // Read all data from the sheet
-      const dataResponse = await fetch(
+      const dataResponse = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetTitle}`,
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }
+        },
+        accessToken
       );
 
       if (!dataResponse.ok) {
@@ -902,16 +981,23 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
       console.log("Received tokens:", tokenResponse.data);
       
-      const accessToken = tokenResponse.data.access_token;
+      const { access_token, refresh_token } = tokenResponse.data;
       
-      if (accessToken) {
+      if (access_token) {
         console.log("✅ Access token received - can proceed with Google Sheets integration");
+        
+        // Store refresh token if available
+        if (refresh_token) {
+          console.log("✅ Refresh token also received");
+          setRefreshToken(refresh_token);
+          localStorage.setItem('googleRefreshToken', refresh_token);
+        }
                 
         // Update user state with access token
-        onChangeUser({ key: accessToken });
+        onChangeUser({ key: access_token });
         
         // Sync with Google Sheets after successful login
-        syncWithGoogleSheets(accessToken);
+        syncWithGoogleSheets(access_token);
       } else {
         console.log("❌ No access token received");
       }
@@ -928,6 +1014,10 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   return (
     <div>
+      <button onClick={async () => {
+        const accessToken = await refreshAccessToken(refreshToken || "");
+        console.log(accessToken);
+      }} >Get access token</button>
       {/* <div>
         <span>Google Sheets integration</span>
       </div> */}
@@ -1079,7 +1169,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         )}
         {/* Connected State with Spreadsheet */}
         {currentUser &&
-          spreadsheetUrl &&
           !isCreatingSpreadsheet &&
           !isUpdatingSpreadsheet && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 shadow-sm">
@@ -1119,17 +1208,19 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
                     clipRule="evenodd"
                   />
                 </svg>
-                {spreadsheetId
+                {spreadsheetUrl
                   ? "Connected to existing spreadsheet"
-                  : "Connected and spreadsheet ready"}
+                  : "Connected - access token obtained from stored refresh token"}
               </p>
               <div className="flex gap-2">
-                <button
-                  onClick={() => window.open(spreadsheetUrl, "_blank")}
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-                >
-                  Open Spreadsheet
-                </button>
+                {spreadsheetUrl && (
+                  <button
+                    onClick={() => window.open(spreadsheetUrl, "_blank")}
+                    className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                  >
+                    Open Spreadsheet
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     if (currentUser?.key) {
