@@ -11,7 +11,7 @@ import {
 } from "@/api";
 import IHabbit from "@/types/habbit";
 import IDailySnapshot from "@/types/dailySnapshot";
-import { GoogleLogin } from "@react-oauth/google";
+import { registerSyncFunction } from "@/syncManager";
 
 interface IntegrationPannelProps {
   currentUser: User | undefined;
@@ -42,6 +42,12 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         if (newAccessToken) {
           console.log('✅ Successfully refreshed access token from stored refresh token');
           onChangeUser({ key: newAccessToken });
+
+          // Sync with google: use google data
+          syncWithGoogleSheets(newAccessToken).then(console.log);
+
+          // Register update functon
+          registerSyncFunction(() => manualSyncToSpreadsheet(newAccessToken));
         } else {
           console.log('❌ Failed to refresh access token, removing stored refresh token');
           localStorage.removeItem('googleRefreshToken');
@@ -122,7 +128,9 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     return response;
   };
 
-  // find SpreadSheet by name using accessToken
+  /**
+   * find SpreadSheet by name using accessToken
+   */
   const findSpreadsheetByName = async (accessToken: string, name: string) => {
     try {
       console.log(`Searching for spreadsheet named: "${name}"`);
