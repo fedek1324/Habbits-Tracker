@@ -56,7 +56,9 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   const SPREADSHEET_NAME = "My habits tracker";
 
-  // Clear spreadsheet info from state
+  /**
+   * Clear spreadsheet info from state
+   */
   const clearSpreadsheetInfo = () => {
     setSpreadsheetId(null);
     setSpreadsheetUrl(null);
@@ -64,7 +66,9 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     localStorage.removeItem('googleRefreshToken');
   };
 
-  // get Access Token using refreshToken
+  /**
+   * get Access Token using refreshToken
+   */
   const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
     try {
       console.log("Refreshing access token...");
@@ -84,7 +88,9 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     }
   };
 
-  // use fetch with arguments and refrest access token if needed
+  /**
+   * use fetch with arguments and refrest access token if needed
+   */
   const makeAuthenticatedRequest = async (
     url: string,
     options: RequestInit,
@@ -167,8 +173,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   * find table by name using accessToken 
   * if table exists parse data from it and call onChange from parent
   * if not create such table using getDailySnapshots and getHabits
-  * @param accessToken 
-  * @returns 
   */
   const syncWithGoogleSheets = async (accessToken: string) => {
     try {
@@ -309,9 +313,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   /**
    * sets headers for spreadSheet using arguments
-   * @param accessToken 
-   * @param spreadsheetId 
-   * @param habitNames 
    */
   const setupSpreadsheetHeaders = async (
     accessToken: string,
@@ -354,8 +355,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   /**
    * deletes all table data except headers
-   * @param accessToken 
-   * @param spreadsheetId 
    */
   const clearSpreadsheetData = async (
     accessToken: string,
@@ -427,10 +426,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   /**
    * fill spreadsheet with habits 
    * calling getDailySnapshots and getHabits
-   * @param accessToken 
-   * @param spreadsheetId 
-   * @param isUpdate 
-   * @returns 
    */
   const populateSpreadsheetWithHabits = async (
     accessToken: string,
@@ -780,9 +775,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   /**
    * using spreadSheetId and accessToken reads spreadSheet content
-   * @param accessToken 
-   * @param spreadsheetId 
-   * @returns 
    */
   const readExistingSpreadsheetData = async (
     accessToken: string,
@@ -848,8 +840,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   /**
    * using spreadSheetData from agtument NOT USING PROPER METHODS 
    * creates habits info and returns it
-   * @param spreadsheetData 
-   * @returns 
    */
   const parseSpreadsheetDataToHabits = async (spreadsheetData: {
     headers: string[];
@@ -930,9 +920,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   /**
    * using proper methods like addHabit and saveDailySnapshot initializesHabits
-   * @param habits 
-   * @param snapshots 
-   * @returns 
    */
   const initializeHabitsFromSpreadsheet = async (
     habits: IHabbit[],
