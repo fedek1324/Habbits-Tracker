@@ -142,6 +142,9 @@ export const saveDailySnapshot = async (
   }
 };
 
+/**
+ * Also creates snapshot if it did not exist
+ */
 export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
   const today = new Date().toISOString().split("T")[0];
   const snapshots = await getDailySnapshotsRaw();

@@ -6,62 +6,69 @@ import AddHabbit from "./components/AddHabbit";
 import IntegrationPannel from "./components/IntegrationPannel";
 import BottomNavigation from "./components/BottomNavigation";
 import HistoryView from "./components/HistoryView";
+
+// Import write operations from syncManager instead
 import {
-  getHabits,
+  addHabit,
   updateHabit,
   deleteHabbit,
-  addHabit,
-  getTodaySnapshot,
-  saveDailySnapshot,
   updateHabitCount,
   updateHabitNeedCount,
-} from "@/api";
+  getHabits,
+  getTodaySnapshot,
+  saveDailySnapshot
+} from "@/syncManager";
 import IHabbit from "@/types/habbit";
 import User from "@/types/user";
 
 type DispalyHabbit = {
-  habitId: string,
-  text: string,
-  needCount: number,
-  actualCount: number
-}
+  habitId: string;
+  text: string;
+  needCount: number;
+  actualCount: number;
+};
 
 export default function Home() {
   const [habitsDisplayData, setHabits] = useState<Array<DispalyHabbit>>([]);
   const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
 
-  useEffect(() => {
-    async function initializeHabits() {
-      let habits: Array<DispalyHabbit> = [];
-      let todaySnapshot = await getTodaySnapshot();
-      const fetchedHabits = await getHabits();
+  // Function to refresh habits data
+  const refreshHabits = async () => {
+    let habits: Array<DispalyHabbit> = [];
+    let todaySnapshot = await getTodaySnapshot();
+    const fetchedHabits = await getHabits();
 
-      for (const habit of todaySnapshot.habbits) {
-        habits.push({
-          habitId: habit.habbitId,
-          text: fetchedHabits.find((h) => h.id === habit.habbitId)?.text || "No text",
-          needCount: habit.habbitNeedCount,
-          actualCount: habit.habbitDidCount
-        });
-      }
-
-      setHabits(habits);
+    for (const habit of todaySnapshot.habbits) {
+      habits.push({
+        habitId: habit.habbitId,
+        text:
+          fetchedHabits.find((h) => h.id === habit.habbitId)?.text || "No text",
+        needCount: habit.habbitNeedCount,
+        actualCount: habit.habbitDidCount,
+      });
     }
 
-    initializeHabits();
+    setHabits(habits);
+  };
+
+  useEffect(() => {
+    refreshHabits();
   }, []);
 
   const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
     await addHabit(newHabbit);
 
     // Update local state
-    setHabits((prev) => [...prev, {
-      habitId: newHabbit.id,
-      text: newHabbit.text,
-      actualCount: 0,
-      needCount: needCount
-    }]);
+    setHabits((prev) => [
+      ...prev,
+      {
+        habitId: newHabbit.id,
+        text: newHabbit.text,
+        actualCount: 0,
+        needCount: needCount,
+      },
+    ]);
 
     // Add to today's snapshot
     const todaySnapshot = await getTodaySnapshot();
@@ -84,18 +91,18 @@ export default function Home() {
     );
 
     // Update local state
-    setHabits((prev) => prev.map((h) => 
-      h.habitId === id 
-        ? { ...h, actualCount: newActualCount }
-        : h
-    ));
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.habitId === id ? { ...h, actualCount: newActualCount } : h
+      )
+    );
 
     // Update in snapshot
     await updateHabitCount(id, newActualCount);
   };
 
   const handleDelete = async (id: string) => {
-    setHabits((prev) => prev.filter((h) => h.habitId !== id))
+    setHabits((prev) => prev.filter((h) => h.habitId !== id));
 
     await deleteHabbit(id);
   };
@@ -106,12 +113,18 @@ export default function Home() {
     newActualCount?: number
   ) => {
     // Update habit text
-    setHabits((prev) => prev.map((h) => (h.habitId === habbit.id ? {
-      habitId: habbit.id,
-      text: habbit.text,
-      needCount: newNeedCount || 1,
-      actualCount: newActualCount || 0
-    } : h)));
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.habitId === habbit.id
+          ? {
+              habitId: habbit.id,
+              text: habbit.text,
+              needCount: newNeedCount || 1,
+              actualCount: newActualCount || 0,
+            }
+          : h
+      )
+    );
 
     await updateHabitCount(habbit.id, newActualCount || 0);
     await updateHabitNeedCount(habbit.id, newNeedCount || 1);
@@ -134,7 +147,11 @@ export default function Home() {
 
               {/*Google integration panel */}
               <div className="mb-4">
-                <IntegrationPannel currentUser={currentUser} onChangeUser={setCurrentUser} />
+                <IntegrationPannel
+                  currentUser={currentUser}
+                  onChangeUser={setCurrentUser}
+                  onDataChanged={refreshHabits}
+                />
               </div>
 
               {/* Habbits list */}
@@ -146,7 +163,7 @@ export default function Home() {
                         key={habit.habitId}
                         habbit={{
                           id: habit.habitId,
-                          text: habit.text
+                          text: habit.text,
                         }}
                         currentCount={habit.actualCount}
                         needCount={habit.needCount}
