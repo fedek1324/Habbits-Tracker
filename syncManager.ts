@@ -8,12 +8,23 @@ import {
   getTodaySnapshot as apiGetTodaySnapshot,
   saveDailySnapshot as apiSaveDailySnapshot,
 } from "./api";
-import IHabbit from "./types/habbit";
 
-// Configuration for auto-sync
+/**
+ * If false sync with google sheets will not be performed
+ */
 const AUTO_SYNC_ENABLED = true;
+const DEBOUNCE_MS = 2000;
 
+/**
+ * Function that we set from outside that will perform sync with google
+ * spreadsheet.
+ */
 let syncToSpreadsheetFn: (() => Promise<void>) | null = null;
+let debounceTimer: NodeJS.Timeout | null = null;
+/**
+ * If true query to google is performing
+ */
+let pending = false;
 
 /**
  * Register the sync function from IntegrationPanel
@@ -27,17 +38,54 @@ export const registerSyncFunction = (syncFn: () => Promise<void>) => {
  */
 export const unregisterSyncFunction = () => {
   syncToSpreadsheetFn = null;
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  pending = false;
+};
+
+/**
+ * Actual sync execution function
+ */
+const executeSync = async () => {
+  if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) return;
+
+  console.log("🔄 Triggering spreadsheet sync...");
+  pending = true;
+  try {
+    await syncToSpreadsheetFn();
+    console.log("✅ Spreadsheet sync completed");
+  } catch (error) {
+    console.error("❌ Spreadsheet sync failed:", error);
+  } finally {
+    pending = false;
+  }
 };
 
 /**
  * Trigger sync with debouncing for batch operations
  */
-const triggerSync = async () => {
+const triggerSync = (operationName?: string) => {
   if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) return;
 
-  console.log("🔄 Triggering spreadsheet sync...");
-  await syncToSpreadsheetFn!();
-  console.log("✅ Spreadsheet sync completed");
+  // Clear existing timer
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+
+  // Set new timer
+  debounceTimer = setTimeout(() => {
+    debounceTimer = null;
+    if (!pending) {
+      executeSync();
+    }
+  }, DEBOUNCE_MS);
+
+  console.log(
+    `⏱️ Sync scheduled in ${DEBOUNCE_MS}ms (debounced). 
+    Operation name: ${operationName}`
+  );
 };
 
 /**
@@ -48,7 +96,7 @@ export const addHabit = async (
 ): ReturnType<typeof apiAddHabit> => {
   const result = await apiAddHabit(...args);
   if (result) {
-    triggerSync();
+    triggerSync("addHabit");
   }
   return result;
 };
@@ -57,14 +105,14 @@ export const updateHabit = async (
   ...args: Parameters<typeof apiUpdateHabit>
 ): ReturnType<typeof apiUpdateHabit> => {
   await apiUpdateHabit(...args);
-  triggerSync();
+  triggerSync("updateHabit");
 };
 
 export const deleteHabbit = async (
   ...args: Parameters<typeof apiDeleteHabbit>
 ): ReturnType<typeof apiDeleteHabbit> => {
   await apiDeleteHabbit(...args);
-  triggerSync();
+  triggerSync("deleteHabbit");
 };
 
 export const updateHabitCount = async (
@@ -72,7 +120,7 @@ export const updateHabitCount = async (
 ): ReturnType<typeof apiUpdateHabitCount> => {
   const result = await apiUpdateHabitCount(...args);
   if (result) {
-    triggerSync();
+    triggerSync("updateHabitCount");
   }
   return result;
 };
@@ -82,7 +130,7 @@ export const updateHabitNeedCount = async (
 ): Promise<boolean> => {
   const result = await apiUpdateHabitNeedCount(...args);
   if (result) {
-    triggerSync();
+    triggerSync("updateHabitNeedCount");
   }
   return result;
 };
@@ -101,7 +149,7 @@ export const getTodaySnapshot = async (
   const result = await apiGetTodaySnapshot(...args);
   // apiGetTodaySnapshot can create todays snapshot so sync
   if (result) {
-    triggerSync();
+    triggerSync("getTodaySnapshot");
   }
   return result;
 };
@@ -111,7 +159,7 @@ export const saveDailySnapshot = async (
 ): ReturnType<typeof apiSaveDailySnapshot> => {
   const result = await apiSaveDailySnapshot(...args);
   if (result) {
-    triggerSync();
+    triggerSync("saveDailySnapshot");
   }
   return result;
 };

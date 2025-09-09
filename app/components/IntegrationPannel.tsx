@@ -730,11 +730,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         },
       ];
 
-      console.log(
-        "Formatting request:",
-        JSON.stringify({ requests: requests }, null, 2)
-      );
-
       const response = await makeAuthenticatedRequest(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
         {
@@ -1077,7 +1072,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
               </svg>
               {isCreatingSpreadsheet
                 ? "Creating your habits spreadsheet..."
-                : "Updating your habits spreadsheet..."}
+                : "Updating..."}
             </p>
           </div>
         )}
