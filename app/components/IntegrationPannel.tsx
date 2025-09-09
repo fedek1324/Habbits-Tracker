@@ -216,14 +216,14 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
           existingSpreadsheet.id
         );
 
+        // Clear existing local data first
+        localStorage.removeItem("habits");
+        localStorage.removeItem("dailySnapshots");
+
         if (spreadsheetData && spreadsheetData.dataRows.length > 0) {
           console.log(
             "Found data in existing spreadsheet, reinitializing local storage..."
           );
-
-          // Clear existing local data first
-          localStorage.removeItem("habits");
-          localStorage.removeItem("dailySnapshots");
 
           const parsedData = await parseSpreadsheetDataToHabits(
             spreadsheetData
@@ -237,88 +237,76 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
             console.log(
               "✅ Successfully reinitialized habits from existing spreadsheet"
             );
-
-            // Notify parent component that data has changed
-            if (onDataChanged) {
-              onDataChanged();
-            }
-
-            setIsUpdatingSpreadsheet(false);
-            return {
-              spreadsheetId: existingSpreadsheet.id,
-              spreadsheetUrl: existingSpreadsheet.url,
-            };
           }
         } else {
           console.log(
             "No data found in existing spreadsheet, keeping current local data"
           );
-          // If spreadsheet exists but has no data, update it with local data
-          await populateSpreadsheetWithHabits(
-            accessToken,
-            existingSpreadsheet.id,
-            false
-          );
-          console.log(
-            "✅ Successfully updated empty spreadsheet with local data"
-          );
-          setIsUpdatingSpreadsheet(false);
-          return {
-            spreadsheetId: existingSpreadsheet.id,
-            spreadsheetUrl: existingSpreadsheet.url,
-          };
         }
-      }
 
-      // Create a new spreadsheet
-      setIsCreatingSpreadsheet(true);
-      console.log("Creating new habits spreadsheet...");
+        // Notify parent component that data has changed
+        if (onDataChanged) {
+          onDataChanged();
+        }
 
-      const response = await makeAuthenticatedRequest(
-        "https://sheets.googleapis.com/v4/spreadsheets",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            properties: {
-              title: SPREADSHEET_NAME,
+        setIsUpdatingSpreadsheet(false);
+        return {
+          spreadsheetId: existingSpreadsheet.id,
+          spreadsheetUrl: existingSpreadsheet.url,
+        };
+      } else {
+        // Create a new spreadsheet
+        setIsCreatingSpreadsheet(true);
+        console.log("Creating new habits spreadsheet...");
+
+        const response = await makeAuthenticatedRequest(
+          "https://sheets.googleapis.com/v4/spreadsheets",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
             },
-            sheets: [
-              {
-                properties: {
-                  title: "Habits Data",
-                },
+            body: JSON.stringify({
+              properties: {
+                title: SPREADSHEET_NAME,
               },
-            ],
-          }),
-        },
-        accessToken
-      );
+              sheets: [
+                {
+                  properties: {
+                    title: "Habits Data",
+                  },
+                },
+              ],
+            }),
+          },
+          accessToken
+        );
 
-      if (!response.ok) {
-        throw new Error(`Failed to create spreadsheet: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to create spreadsheet: ${response.statusText}`
+          );
+        }
+
+        const spreadsheet = await response.json();
+        console.log("✅ Spreadsheet created successfully:", spreadsheet);
+        console.log("📝 Spreadsheet ID:", spreadsheet.spreadsheetId);
+        console.log("🔗 Spreadsheet URL:", spreadsheet.spreadsheetUrl);
+
+        // Populate with existing habits data (this will also set up headers)
+        await populateSpreadsheetWithHabits(
+          accessToken,
+          spreadsheet.spreadsheetId
+        );
+
+        // Update state with new spreadsheet info
+        setSpreadsheetId(spreadsheet.spreadsheetId);
+        setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
+        setIsCreatingSpreadsheet(false);
+        setIsUpdatingSpreadsheet(false);
+
+        return spreadsheet;
       }
-
-      const spreadsheet = await response.json();
-      console.log("✅ Spreadsheet created successfully:", spreadsheet);
-      console.log("📝 Spreadsheet ID:", spreadsheet.spreadsheetId);
-      console.log("🔗 Spreadsheet URL:", spreadsheet.spreadsheetUrl);
-
-      // Populate with existing habits data (this will also set up headers)
-      await populateSpreadsheetWithHabits(
-        accessToken,
-        spreadsheet.spreadsheetId
-      );
-
-      // Update state with new spreadsheet info
-      setSpreadsheetId(spreadsheet.spreadsheetId);
-      setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
-      setIsCreatingSpreadsheet(false);
-      setIsUpdatingSpreadsheet(false);
-
-      return spreadsheet;
     } catch (error) {
       console.error("❌ Error syncing with Google Sheets:", error);
       setIsCreatingSpreadsheet(false);
