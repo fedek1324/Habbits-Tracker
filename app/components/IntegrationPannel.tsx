@@ -32,15 +32,19 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   // Load refresh token from localStorage on component mount
   useEffect(() => {
-    const storedRefreshToken = localStorage.getItem('googleRefreshToken');
+    const storedRefreshToken = localStorage.getItem("googleRefreshToken");
     if (storedRefreshToken) {
-      console.log('✅ Found stored refresh token, attempting to get fresh access token...');
+      console.log(
+        "✅ Found stored refresh token, attempting to get fresh access token..."
+      );
       setRefreshToken(storedRefreshToken);
-      
+
       // Automatically try to get a fresh access token
       refreshAccessToken(storedRefreshToken).then((newAccessToken) => {
         if (newAccessToken) {
-          console.log('✅ Successfully refreshed access token from stored refresh token');
+          console.log(
+            "✅ Successfully refreshed access token from stored refresh token"
+          );
           onChangeUser({ key: newAccessToken });
 
           // Sync with google: use google data
@@ -49,8 +53,10 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
           // Register update functon
           registerSyncFunction(() => manualSyncToSpreadsheet(newAccessToken));
         } else {
-          console.log('❌ Failed to refresh access token, removing stored refresh token');
-          localStorage.removeItem('googleRefreshToken');
+          console.log(
+            "❌ Failed to refresh access token, removing stored refresh token"
+          );
+          localStorage.removeItem("googleRefreshToken");
           setRefreshToken(null);
         }
       });
@@ -69,13 +75,15 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     setSpreadsheetId(null);
     setSpreadsheetUrl(null);
     setRefreshToken(null);
-    localStorage.removeItem('googleRefreshToken');
+    localStorage.removeItem("googleRefreshToken");
   };
 
   /**
    * get Access Token using refreshToken
    */
-  const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
+  const refreshAccessToken = async (
+    refreshToken: string
+  ): Promise<string | null> => {
     try {
       console.log("Refreshing access token...");
       const response = await axios.post("/api/auth/google/refresh-token", {
@@ -86,7 +94,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         console.log("✅ Successfully refreshed access token");
         return response.data.access_token;
       }
-      
+
       return null;
     } catch (error) {
       console.error("❌ Error refreshing access token:", error);
@@ -115,11 +123,11 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     if (response.status === 401 && refreshToken && retryCount === 0) {
       console.log("Access token expired, attempting to refresh...");
       const newAccessToken = await refreshAccessToken(refreshToken);
-      
+
       if (newAccessToken) {
         // Update user with new access token
         onChangeUser({ key: newAccessToken });
-        
+
         // Retry the request with new token
         return makeAuthenticatedRequest(url, options, newAccessToken, 1);
       }
@@ -177,11 +185,11 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     }
   };
 
- /**
-  * find table by name using accessToken 
-  * if table exists parse data from it and call onChange from parent
-  * if not create such table using getDailySnapshots and getHabits
-  */
+  /**
+   * find table by name using accessToken
+   * if table exists parse data from it and call onChange from parent
+   * if not create such table using getDailySnapshots and getHabits
+   */
   const syncWithGoogleSheets = async (accessToken: string) => {
     try {
       // Search for existing spreadsheet by name
@@ -432,7 +440,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   };
 
   /**
-   * fill spreadsheet with habits 
+   * fill spreadsheet with habits
    * calling getDailySnapshots and getHabits
    */
   const populateSpreadsheetWithHabits = async (
@@ -846,7 +854,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   };
 
   /**
-   * using spreadSheetData from agtument NOT USING PROPER METHODS 
+   * using spreadSheetData from agtument NOT USING PROPER METHODS
    * creates habits info and returns it
    */
   const parseSpreadsheetDataToHabits = async (spreadsheetData: {
@@ -957,8 +965,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   /**
    * When the button is pressed finds spreadSheet by accessToken and
    * populates it with data
-   * @param accessToken 
-   * @returns 
+   * @param accessToken
+   * @returns
    */
   const manualSyncToSpreadsheet = async (accessToken: string) => {
     try {
@@ -1022,22 +1030,24 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       });
 
       console.log("Received tokens:", tokenResponse.data);
-      
+
       const { access_token, refresh_token } = tokenResponse.data;
-      
+
       if (access_token) {
-        console.log("✅ Access token received - can proceed with Google Sheets integration");
-        
+        console.log(
+          "✅ Access token received - can proceed with Google Sheets integration"
+        );
+
         // Store refresh token if available
         if (refresh_token) {
           console.log("✅ Refresh token also received");
           setRefreshToken(refresh_token);
-          localStorage.setItem('googleRefreshToken', refresh_token);
+          localStorage.setItem("googleRefreshToken", refresh_token);
         }
-                
+
         // Update user state with access token
         onChangeUser({ key: access_token });
-        
+
         // Sync with Google Sheets after successful login
         syncWithGoogleSheets(access_token);
 
@@ -1058,11 +1068,11 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   }
 
   return (
-    <div style={{height: '152px'}}>
+    <div style={{ height: "152px" }}>
       {/* <div>
         <span>Google Sheets integration</span>
       </div> */}
-      <div className="max-w-md mx-auto space-y-4">       
+      <div className="max-w-md mx-auto space-y-4">
         {/* Creating/Updating Spreadsheet State */}
         {(isCreatingSpreadsheet || isUpdatingSpreadsheet) && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-sm">
@@ -1099,81 +1109,80 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
           </div>
         )}
         {/* Connected State with Spreadsheet */}
-        {currentUser &&
-          !isCreatingSpreadsheet &&
-          !isUpdatingSpreadsheet && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <path
-                    fill="#0f9d58"
-                    d="M11.5 12.5v5h6.5c-.17 1.39-.72 2.73-1.5 3.87L20.84 17C22.2 15.13 23 12.8 23 10.18c0-.83-.09-1.64-.27-2.41H12v4.73h5.5z"
-                  />
-                  <path
-                    fill="#4285f4"
-                    d="M6 12c0-.8.13-1.56.36-2.28L2.05 6.7C1.23 8.34 0.82 10.13 0.82 12s.41 3.66 1.23 5.3l4.31-3.02c-.23-.72-.36-1.48-.36-2.28z"
-                  />
-                  <path
-                    fill="#ea4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.05 7.07l4.31 3.02C7.25 7.69 9.39 5.38 12 5.38z"
-                  />
-                  <path
-                    fill="#fbbc04"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.61 0-4.75-1.76-5.54-4.12l-4.31 3.33C3.99 20.53 7.7 23 12 23z"
-                  />
-                </svg>
-                <h3 className="font-semibold text-green-900">Google Sheets</h3>
-                <div className="ml-auto">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                </div>
-              </div>
-              <p className="text-sm text-green-700 mb-4 flex items-center gap-2">
-                <svg
-                  className="w-4 h-4 text-green-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                {spreadsheetUrl
-                  ? "Connected to existing spreadsheet"
-                  : "Connected - access token obtained from stored refresh token"}
-              </p>
-              <div className="flex gap-2">
-                {spreadsheetUrl && (
-                  <button
-                    onClick={() => window.open(spreadsheetUrl, "_blank")}
-                    className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-                  >
-                    Open Spreadsheet
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    if (currentUser?.key) {
-                      manualSyncToSpreadsheet(currentUser.key);
-                    }
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-                >
-                  Sync Now
-                </button>
-                <button
-                  onClick={() => {
-                    onChangeUser({ key: "" });
-                    clearSpreadsheetInfo();
-                  }}
-                  className="bg-white hover:bg-gray-50 text-green-600 text-sm px-4 py-2 rounded-lg font-medium border border-green-200 transition-colors duration-200"
-                >
-                  Disconnect
-                </button>
+        {currentUser && !isCreatingSpreadsheet && !isUpdatingSpreadsheet && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <svg className="w-6 h-6" viewBox="0 0 24 24">
+                <path
+                  fill="#0f9d58"
+                  d="M11.5 12.5v5h6.5c-.17 1.39-.72 2.73-1.5 3.87L20.84 17C22.2 15.13 23 12.8 23 10.18c0-.83-.09-1.64-.27-2.41H12v4.73h5.5z"
+                />
+                <path
+                  fill="#4285f4"
+                  d="M6 12c0-.8.13-1.56.36-2.28L2.05 6.7C1.23 8.34 0.82 10.13 0.82 12s.41 3.66 1.23 5.3l4.31-3.02c-.23-.72-.36-1.48-.36-2.28z"
+                />
+                <path
+                  fill="#ea4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.05 7.07l4.31 3.02C7.25 7.69 9.39 5.38 12 5.38z"
+                />
+                <path
+                  fill="#fbbc04"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.61 0-4.75-1.76-5.54-4.12l-4.31 3.33C3.99 20.53 7.7 23 12 23z"
+                />
+              </svg>
+              <h3 className="font-semibold text-green-900">Google Sheets</h3>
+              <div className="ml-auto">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               </div>
             </div>
-          )}
+            <p className="text-sm text-green-700 mb-4 flex items-center gap-2">
+              <svg
+                className="w-4 h-4 text-green-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {spreadsheetUrl
+                ? "Connected to existing spreadsheet"
+                : "Connected - access token obtained from stored refresh token"}
+            </p>
+            <div className="flex gap-2">
+              {spreadsheetUrl && (
+                <button
+                  onClick={() => window.open(spreadsheetUrl, "_blank")}
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                >
+                  Open Spreadsheet
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (currentUser?.key) {
+                    // Sync with google: use google data
+                    syncWithGoogleSheets(currentUser?.key).then(console.log);
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+              >
+                Sync Now
+              </button>
+              <button
+                onClick={() => {
+                  onChangeUser({ key: "" });
+                  clearSpreadsheetInfo();
+                }}
+                className="bg-white hover:bg-gray-50 text-green-600 text-sm px-4 py-2 rounded-lg font-medium border border-green-200 transition-colors duration-200"
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
+        )}
         {/* Not Connected State */}
         {currentUser === undefined &&
           !isCreatingSpreadsheet &&
