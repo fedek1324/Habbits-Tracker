@@ -8,6 +8,8 @@ add + and - buttons for mobile number input
 adjust no habbits state look (maybe add no habbits text)
 adjust animations 
 use functions like updateHabitNeedCount instead of modifying todaySnapshots
+populateSpreadsheetWithHabits calls to many times
+on clearing spreadsheet don't call extra get spreadsheet. Do delete immediately
 
 highlight "Hello" on welcome screen
 

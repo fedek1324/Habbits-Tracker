@@ -257,7 +257,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
           await populateSpreadsheetWithHabits(
             accessToken,
             existingSpreadsheet.id,
-            true
+            false
           );
           console.log(
             "✅ Successfully updated empty spreadsheet with local data"
@@ -309,8 +309,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       // Populate with existing habits data (this will also set up headers)
       await populateSpreadsheetWithHabits(
         accessToken,
-        spreadsheet.spreadsheetId,
-        false
+        spreadsheet.spreadsheetId
       );
 
       // Update state with new spreadsheet info
@@ -370,7 +369,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   };
 
   /**
-   * deletes all table data except headers
+   * deletes all table data
    */
   const clearSpreadsheetData = async (
     accessToken: string,
@@ -400,27 +399,14 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       const sheet = spreadsheetData.sheets[0];
       const sheetId = sheet.properties.sheetId;
 
-      // Clear all data by deleting rows (keeping headers)
-      const requests = [
-        {
-          deleteDimension: {
-            range: {
-              sheetId: sheetId,
-              dimension: "ROWS",
-              startIndex: 1, // Start from row 2 (0-indexed), keep header row
-            },
-          },
-        },
-      ];
-
+      // Clear all data by clearing values (much simpler and more reliable)
       const response = await makeAuthenticatedRequest(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheet.properties.title}:clear`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ requests }),
         },
         accessToken
       );
@@ -446,17 +432,17 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   const populateSpreadsheetWithHabits = async (
     accessToken: string,
     spreadsheetId: string,
-    isUpdate = false
+    isOverwrite = true
   ) => {
     try {
       console.log(
-        isUpdate
-          ? "Updating spreadsheet with latest habits data..."
-          : "Populating spreadsheet with habits data..."
+        isOverwrite
+          ? "Populating spreadsheet with latest habits data..."
+          : "Updating spreadsheet with new habits data..."
       );
 
       // If this is an update, clear existing data first
-      if (isUpdate) {
+      if (isOverwrite) {
         await clearSpreadsheetData(accessToken, spreadsheetId);
       }
 
@@ -992,8 +978,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         // Push local data to spreadsheet (don't read from spreadsheet)
         await populateSpreadsheetWithHabits(
           accessToken,
-          existingSpreadsheet.id,
-          true
+          existingSpreadsheet.id
         );
         console.log("✅ Successfully pushed local data to spreadsheet");
 
