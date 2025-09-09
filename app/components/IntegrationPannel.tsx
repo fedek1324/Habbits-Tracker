@@ -933,8 +933,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
   /**
    * Finds spreadSheet by accessToken and populates it with data
-   * @param accessToken
-   * @returns
    */
   const manualSyncToSpreadsheet = async (accessToken: string) => {
     try {

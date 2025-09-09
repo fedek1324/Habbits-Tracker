@@ -17,7 +17,7 @@ when we get access token sync with google automatically
 automatically use Sync now when habit data changes
 on disconnect refresh the page
 instead of registerSyncFunction(() => manualSyncToSpreadsheet(newAccessToken)); use autorefresh access token if needed
-add debounce for + button requests 
+dont search for spreadsheet always but store streadsheet id
 
 Use Redux
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
