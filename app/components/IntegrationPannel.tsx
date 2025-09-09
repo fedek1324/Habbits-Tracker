@@ -1040,6 +1040,9 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         
         // Sync with Google Sheets after successful login
         syncWithGoogleSheets(access_token);
+
+        // Register update functon
+        registerSyncFunction(() => manualSyncToSpreadsheet(access_token));
       } else {
         console.log("❌ No access token received");
       }
@@ -1055,7 +1058,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   }
 
   return (
-    <div>
+    <div style={{height: '152px'}}>
       {/* <div>
         <span>Google Sheets integration</span>
       </div> */}
