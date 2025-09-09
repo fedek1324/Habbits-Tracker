@@ -13,7 +13,7 @@ import {
  * If false sync with google sheets will not be performed
  */
 const AUTO_SYNC_ENABLED = true;
-const DEBOUNCE_MS = 2000;
+const DEBOUNCE_MS = 1000;
 
 /**
  * Function that we set from outside that will perform sync with google

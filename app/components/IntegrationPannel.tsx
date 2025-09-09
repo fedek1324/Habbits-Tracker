@@ -932,8 +932,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   };
 
   /**
-   * When the button is pressed finds spreadSheet by accessToken and
-   * populates it with data
+   * Finds spreadSheet by accessToken and populates it with data
    * @param accessToken
    * @returns
    */
