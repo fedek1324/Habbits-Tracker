@@ -423,16 +423,26 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     isOverwrite = true
   ) => {
     try {
-      console.log(
-        isOverwrite
-          ? "Populating spreadsheet with latest habits data..."
-          : "Updating spreadsheet with new habits data..."
+      console.log("Atomically syncing spreadsheet with latest habits data...");
+
+      // Get spreadsheet metadata to get sheet ID
+      const spreadsheetResponse = await makeAuthenticatedRequest(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+        accessToken
       );
 
-      // If this is an update, clear existing data first
-      if (isOverwrite) {
-        await clearSpreadsheetData(accessToken, spreadsheetId);
+      if (!spreadsheetResponse.ok) {
+        throw new Error(`Failed to get spreadsheet details: ${spreadsheetResponse.statusText}`);
       }
+
+      const spreadsheetData = await spreadsheetResponse.json();
+      const sheet = spreadsheetData.sheets[0];
+      const sheetId = sheet.properties.sheetId;
 
       // Get daily snapshots (historical data) and habits (for names)
       const [snapshots, habits] = await Promise.all([
@@ -443,36 +453,23 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       console.log("Found snapshots:", snapshots.length);
       console.log("Found habits:", habits.length);
 
-      if (snapshots.length === 0) {
-        console.log("No historical data found to populate");
+      if (snapshots.length === 0 && habits.length === 0) {
+        console.log("No data found to populate");
         return;
       }
 
-      // Get all unique habit names and create a mapping
+      // Create habit ID to name mapping from current habits
       const habitIdToName = new Map<string, string>();
       habits.forEach((habit) => {
         habitIdToName.set(habit.id, habit.text);
       });
 
-      // Get all unique habit names from snapshots (in case there are deleted habits)
-      const allHabitNames = new Set<string>();
-      snapshots.forEach((snapshot) => {
-        snapshot.habbits.forEach((habitSnapshot) => {
-          const habitName =
-            habitIdToName.get(habitSnapshot.habbitId) || "Unknown Habit";
-          allHabitNames.add(habitName);
-        });
-      });
+      // Get current habit names from local data
+      const currentHabitNames = Array.from(new Set(habits.map(h => h.text))).sort();
+      console.log("Current habits:", currentHabitNames);
 
-      const habitNamesArray = Array.from(allHabitNames).sort();
-      console.log("Habit columns:", habitNamesArray);
-
-      // Set up headers first
-      await setupSpreadsheetHeaders(
-        accessToken,
-        spreadsheetId,
-        habitNamesArray
-      );
+      // Create headers: Date + habit names
+      const headers = [["Date", ...currentHabitNames]];
 
       // Create a data structure: Map<date, Map<habitName, progress>>
       const dateData = new Map<string, Map<string, string>>();
@@ -485,16 +482,17 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         const dayData = dateData.get(snapshot.date)!;
 
         snapshot.habbits.forEach((habitSnapshot) => {
-          const habitName =
-            habitIdToName.get(habitSnapshot.habbitId) || "Unknown Habit";
-          // Show progress as "actual/target" format
-          const progress = `${habitSnapshot.habbitDidCount}/${habitSnapshot.habbitNeedCount}`;
-          dayData.set(habitName, progress);
+          const habitName = habitIdToName.get(habitSnapshot.habbitId);
+          if (habitName && currentHabitNames.includes(habitName)) {
+            // Show progress as "actual/target" format
+            const progress = `${habitSnapshot.habbitDidCount}/${habitSnapshot.habbitNeedCount}`;
+            dayData.set(habitName, progress);
+          }
         });
       });
 
       // Convert to rows for the spreadsheet
-      const rows: string[][] = [];
+      const dataRows: string[][] = [];
       const sortedDates = Array.from(dateData.keys()).sort();
 
       sortedDates.forEach((date) => {
@@ -502,33 +500,155 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
         const dayData = dateData.get(date)!;
 
         // Add data for each habit column (in same order as headers)
-        habitNamesArray.forEach((habitName) => {
+        currentHabitNames.forEach((habitName) => {
           row.push(dayData.get(habitName) || ""); // Empty if no data for this habit on this date
         });
 
-        rows.push(row);
+        dataRows.push(row);
       });
 
-      if (rows.length === 0) {
-        console.log("No habit data to populate");
-        return;
-      }
+      // Combine headers and data
+      const allRows = [...headers, ...dataRows];
+      
+      // Calculate dimensions for the update
+      const numColumns = currentHabitNames.length + 1; // +1 for Date column
+      const numRows = allRows.length;
 
-      // Calculate the column range
-      const endColumn = String.fromCharCode(65 + habitNamesArray.length); // A + number of habits
-      const endRow = rows.length + 1; // +1 for header row
+      console.log(`Updating spreadsheet with ${numRows} rows and ${numColumns} columns`);
 
-      // Write data to spreadsheet starting from row 2 (after headers)
-      const response = await makeAuthenticatedRequest(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A2:${endColumn}${endRow}?valueInputOption=USER_ENTERED`,
+      // Prepare atomic batchUpdate request that handles everything
+      const requests = [
+        // First, ensure we have enough rows and columns
         {
-          method: "PUT",
+          updateSheetProperties: {
+            properties: {
+              sheetId: sheetId,
+              gridProperties: {
+                rowCount: Math.max(numRows + 10, 100), // Add some buffer
+                columnCount: Math.max(numColumns + 5, 26), // Add some buffer
+              },
+            },
+            fields: "gridProperties.rowCount,gridProperties.columnCount",
+          },
+        },
+        // Update all values in one go
+        {
+          updateCells: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 0,
+              endRowIndex: numRows,
+              startColumnIndex: 0,
+              endColumnIndex: numColumns,
+            },
+            rows: allRows.map((row) => ({
+              values: row.map((cellValue) => ({
+                userEnteredValue: { stringValue: cellValue || "" },
+              })),
+            })),
+            fields: "userEnteredValue",
+          },
+        },
+        // Apply header formatting
+        {
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 0,
+              endRowIndex: 1,
+              startColumnIndex: 0,
+              endColumnIndex: numColumns,
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 0.2, green: 0.4, blue: 0.8 },
+                textFormat: {
+                  foregroundColor: { red: 1, green: 1, blue: 1 },
+                  fontSize: 12,
+                  bold: true,
+                },
+                horizontalAlignment: "CENTER",
+                verticalAlignment: "MIDDLE",
+              },
+            },
+            fields: "userEnteredFormat",
+          },
+        },
+        // Apply data formatting
+        {
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 1,
+              endRowIndex: numRows,
+              startColumnIndex: 0,
+              endColumnIndex: numColumns,
+            },
+            cell: {
+              userEnteredFormat: {
+                textFormat: {
+                  fontSize: 10,
+                },
+                horizontalAlignment: "CENTER",
+                verticalAlignment: "MIDDLE",
+              },
+            },
+            fields: "userEnteredFormat",
+          },
+        },
+        // Add borders
+        {
+          updateBorders: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: 0,
+              endRowIndex: numRows,
+              startColumnIndex: 0,
+              endColumnIndex: numColumns,
+            },
+            top: { style: "SOLID", width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            bottom: { style: "SOLID", width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            left: { style: "SOLID", width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            right: { style: "SOLID", width: 1, color: { red: 0.8, green: 0.8, blue: 0.8 } },
+            innerHorizontal: { style: "SOLID", width: 1, color: { red: 0.9, green: 0.9, blue: 0.9 } },
+            innerVertical: { style: "SOLID", width: 1, color: { red: 0.9, green: 0.9, blue: 0.9 } },
+          },
+        },
+        // Auto-resize columns
+        {
+          autoResizeDimensions: {
+            dimensions: {
+              sheetId: sheetId,
+              dimension: "COLUMNS",
+              startIndex: 0,
+              endIndex: numColumns,
+            },
+          },
+        },
+        // Freeze first row and first column
+        {
+          updateSheetProperties: {
+            properties: {
+              sheetId: sheetId,
+              gridProperties: {
+                frozenRowCount: 1,
+                frozenColumnCount: 1,
+              },
+            },
+            fields: "gridProperties.frozenRowCount,gridProperties.frozenColumnCount",
+          },
+        },
+      ];
+
+      // Execute the atomic batch update
+      const response = await makeAuthenticatedRequest(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+        {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            values: rows,
-          }),
+          body: JSON.stringify({ requests }),
         },
         accessToken
       );
@@ -536,20 +656,12 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(
-          `Failed to populate data: ${response.status} ${response.statusText} - ${errorBody}`
+          `Failed to update spreadsheet: ${response.status} ${response.statusText} - ${errorBody}`
         );
       }
 
       console.log(
-        `✅ Successfully populated ${rows.length} rows with ${habitNamesArray.length} habit columns`
-      );
-
-      // Format the spreadsheet beautifully
-      await formatSpreadsheet(
-        accessToken,
-        spreadsheetId,
-        habitNamesArray.length,
-        rows.length
+        `✅ Successfully updated spreadsheet with ${dataRows.length} data rows and ${currentHabitNames.length} habit columns in one atomic operation`
       );
     } catch (error) {
       console.error("❌ Error populating spreadsheet with habits:", error);
