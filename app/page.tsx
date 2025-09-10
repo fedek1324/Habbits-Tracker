@@ -133,6 +133,11 @@ export default function Home() {
     await updateHabit(habbit);
   };
 
+  const today = new Date().toLocaleDateString("ru-RU", {
+  day: "numeric",
+  month: "long",
+});;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
@@ -141,7 +146,7 @@ export default function Home() {
             <>
               <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
                 {habitsDisplayData.length > 0
-                  ? `Hello! Today's habits:`
+                  ? `Hello! Habits for today (${today}):`
                   : "Hello! Add habit using the button below"}
               </h1>
 
