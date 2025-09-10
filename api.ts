@@ -1,3 +1,5 @@
+"use client"
+
 import IHabbit from "./types/habbit";
 import IDailySnapshot from "./types/dailySnapshot";
 
@@ -8,7 +10,7 @@ const DAILY_SNAPSHOTS_STORAGE_KEY = "dailySnapshots";
 /**
  * Adds a new habit to localStorage
  * */
-export const addHabit = async (habit: IHabbit): Promise<boolean> => {
+export const addHabit = (habit: IHabbit): boolean => {
   try {
     // Get existing habits from localStorage
     const existingHabitsJson = localStorage.getItem(HABITS_STORAGE_KEY);
@@ -40,7 +42,7 @@ export const addHabit = async (habit: IHabbit): Promise<boolean> => {
 };
 
 // Additional function to get all habits
-export const getHabits = async (): Promise<IHabbit[]> => {
+export const getHabits = (): IHabbit[] => {
   try {
     const habitsJson = localStorage.getItem(HABITS_STORAGE_KEY);
     return habitsJson ? JSON.parse(habitsJson) : [];
@@ -50,7 +52,7 @@ export const getHabits = async (): Promise<IHabbit[]> => {
   }
 };
 
-export const getHabit = async (id: string): Promise<IHabbit | undefined> => {
+export const getHabit = (id: string): IHabbit | undefined => {
   try {
     const habitsJson = localStorage.getItem(HABITS_STORAGE_KEY);
     let habbits: IHabbit[] = habitsJson ? JSON.parse(habitsJson) : [];
@@ -62,7 +64,7 @@ export const getHabit = async (id: string): Promise<IHabbit | undefined> => {
   }
 };
 
-export const updateHabit = async (updatedHabit: IHabbit): Promise<void> => {
+export const updateHabit = (updatedHabit: IHabbit): void => {
   const habits = JSON.parse(localStorage.getItem("habits") || "[]");
   const updated = habits.map((habit: IHabbit) =>
     habit.id === updatedHabit.id ? updatedHabit : habit
@@ -73,10 +75,10 @@ export const updateHabit = async (updatedHabit: IHabbit): Promise<void> => {
 /**
  * delete Habbit in todays' snapshot
  */
-export const deleteHabbit = async (id: string): Promise<void> => {
-  const todaySnapshot = await getTodaySnapshot();
+export const deleteHabbit = (id: string): void => {
+  const todaySnapshot = getTodaySnapshot();
   todaySnapshot.habbits = todaySnapshot.habbits.filter((h) => h.habbitId !== id);
-  await saveDailySnapshot(todaySnapshot);
+  saveDailySnapshot(todaySnapshot);
   // const habits = JSON.parse(localStorage.getItem("habits") || "[]");
   // const updated = habits.filter((habit: IHabbit) => habit.id !== id);
   // localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updated));
@@ -86,7 +88,7 @@ export const deleteHabbit = async (id: string): Promise<void> => {
 /**
  * Daily snapshots functions
  */
-const getDailySnapshotsRaw = async (): Promise<IDailySnapshot[]> => {
+const getDailySnapshotsRaw = (): IDailySnapshot[] => {
   try {
     const snapshotsJson = localStorage.getItem(DAILY_SNAPSHOTS_STORAGE_KEY);
     return snapshotsJson ? JSON.parse(snapshotsJson) : [];
@@ -96,16 +98,16 @@ const getDailySnapshotsRaw = async (): Promise<IDailySnapshot[]> => {
   }
 };
 
-export const getDailySnapshots = async (): Promise<IDailySnapshot[]> => {
-  await fillHistory();
+export const getDailySnapshots = (): IDailySnapshot[] => {
+  fillHistory();
   return getDailySnapshotsRaw();
 };
 
-export const saveDailySnapshot = async (
+export const saveDailySnapshot = (
   snapshot: IDailySnapshot
-): Promise<boolean> => {
+): boolean => {
   try {
-    const existingSnapshots = await getDailySnapshotsRaw();
+    const existingSnapshots = getDailySnapshotsRaw();
 
     // If no existing snapshots, just add the first one
     if (existingSnapshots.length === 0) {
@@ -145,9 +147,9 @@ export const saveDailySnapshot = async (
 /**
  * Also creates snapshot if it did not exist
  */
-export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
+export const getTodaySnapshot = (): IDailySnapshot => {
   const today = new Date().toISOString().split("T")[0];
-  const snapshots = await getDailySnapshotsRaw();
+  const snapshots = getDailySnapshotsRaw();
   let todaySnapshot = snapshots.find((s) => s.date === today);
 
   if (!todaySnapshot) {
@@ -175,7 +177,7 @@ export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
     }
     
     // Save the new snapshot
-    await saveDailySnapshot(todaySnapshot);
+    saveDailySnapshot(todaySnapshot);
   }
 
   return todaySnapshot;
@@ -185,14 +187,14 @@ export const getTodaySnapshot = async (): Promise<IDailySnapshot> => {
  * If there are empty days from last snapshot day and today, fill theese days with snapshots
  * so we will understand lates that there were habbits but they were not incremented
  */
-export const fillHistory = async (): Promise<void> => {
+export const fillHistory = (): void => {
   // create todays snapshot to be sure it is created
-  await getTodaySnapshot();
+  getTodaySnapshot();
 
   // todat with time 00.00.00 for correct currentDate < today compare
   const today = new Date(new Date().toISOString().split("T")[0]);
   let previousSnapshot;
-  const snapshots = await getDailySnapshotsRaw();
+  const snapshots = getDailySnapshotsRaw();
 
   if (snapshots.length > 1) {
     previousSnapshot = snapshots.sort((a, b) =>
@@ -215,7 +217,7 @@ export const fillHistory = async (): Promise<void> => {
         }),
       };
 
-      await saveDailySnapshot(snapshot);
+      saveDailySnapshot(snapshot);
 
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -225,8 +227,8 @@ export const fillHistory = async (): Promise<void> => {
 /**
  * Helper function to get current need count for a habit
  */
-export const getCurrentNeedCount = async (habitId: string): Promise<number> => {
-  const todaySnapshot = await getTodaySnapshot();
+export const getCurrentNeedCount = (habitId: string): number => {
+  const todaySnapshot = getTodaySnapshot();
 
   const habit = todaySnapshot.habbits.find((h) => h.habbitId === habitId);
   return habit?.habbitNeedCount || 1;
@@ -235,10 +237,10 @@ export const getCurrentNeedCount = async (habitId: string): Promise<number> => {
 /**
  * Helper function to get current actual count for a habit
  */
-export const getCurrentActualCount = async (
+export const getCurrentActualCount = (
   habitId: string
-): Promise<number> => {
-  const todaySnapshot = await getTodaySnapshot();
+): number => {
+  const todaySnapshot = getTodaySnapshot();
 
   const habit = todaySnapshot.habbits.find((h) => h.habbitId === habitId);
   return habit?.habbitDidCount || 0;
@@ -247,12 +249,12 @@ export const getCurrentActualCount = async (
 /**
  * Update habit count in today's snapshot
  */
-export const updateHabitCount = async (
+export const updateHabitCount = (
   habitId: string,
   newCount: number
-): Promise<boolean> => {
+): boolean => {
   try {
-    let todaySnapshot = await getTodaySnapshot();
+    let todaySnapshot = getTodaySnapshot();
 
     // Update the specific habit count
     const habitIndex = todaySnapshot.habbits.findIndex(
@@ -262,7 +264,7 @@ export const updateHabitCount = async (
       todaySnapshot.habbits[habitIndex].habbitDidCount = newCount;
     }
 
-    return await saveDailySnapshot(todaySnapshot);
+    return saveDailySnapshot(todaySnapshot);
   } catch (error) {
     console.error("Error updating habit count:", error);
     return false;
@@ -272,12 +274,12 @@ export const updateHabitCount = async (
 /**
  * Update habit need count in today's snapshot
  */
-export const updateHabitNeedCount = async (
+export const updateHabitNeedCount = (
   habitId: string,
   newNeedCount: number
-): Promise<boolean> => {
+): boolean => {
   try {
-    let todaySnapshot = await getTodaySnapshot();
+    let todaySnapshot = getTodaySnapshot();
 
     const habitIndex = todaySnapshot.habbits.findIndex(
       (h) => h.habbitId === habitId
@@ -286,7 +288,7 @@ export const updateHabitNeedCount = async (
       todaySnapshot.habbits[habitIndex].habbitNeedCount = newNeedCount;
     }
 
-    return await saveDailySnapshot(todaySnapshot);
+    return saveDailySnapshot(todaySnapshot);
   } catch (error) {
     console.error("Error updating habit need count:", error);
     return false;

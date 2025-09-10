@@ -18,8 +18,12 @@ import {
   getHabits,
   getTodaySnapshot,
   saveDailySnapshot,
-  registerSyncFunction,
+} from "@/api";
+
+import {
+  registerSyncFunction
 } from "@/syncManager";
+
 import IHabbit from "@/types/habbit";
 import User from "@/types/user";
 import IDailySnapshot from "@/types/dailySnapshot";
@@ -41,6 +45,7 @@ export default function Home() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
   const [state, setState] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
 
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(null);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
@@ -74,6 +79,7 @@ export default function Home() {
   };
 
   useEffect(() => {
+    setMounted(true);
     getCurrentData()
     if (spreadsheetId) {
       registerSyncFunction(() => manualSyncToSpreadsheet(currentUser?.key || ""));
@@ -875,19 +881,19 @@ export default function Home() {
   };
 
   const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
-    await addHabit(newHabbit);
+    addHabit(newHabbit);
 
-    // Add to today's snapshot to local storage
-    const todaySnapshot = await getTodaySnapshot();
+    // Add to today's snapshot to local storage if needed
+    const todaySnapshot = getTodaySnapshot();
 
     todaySnapshot.habbits.push({
       habbitId: newHabbit.id,
       habbitNeedCount: needCount,
       habbitDidCount: 0,
     });
-    await saveDailySnapshot(todaySnapshot);
+    saveDailySnapshot(todaySnapshot);
 
-    const newSnapshotsArr = await getDailySnapshots();
+    const newSnapshotsArr = getDailySnapshots();
 
     // Update local state
     setHabits([...habits, newHabbit]);
@@ -895,64 +901,76 @@ export default function Home() {
   };
 
   const handleIncrement = async (id: string) => {
-    // const habbitDisplayData = habitsDisplayData.find((h) => h.habitId === id);
-    // if (!habbitDisplayData) return;
+    // Add to today's snapshot to local storage if needed
+    const todaySnapshot = getTodaySnapshot();
 
-    // const newActualCount = Math.min(
-    //   habbitDisplayData.needCount,
-    //   habbitDisplayData.actualCount + 1
-    // );
+    const habitData = todaySnapshot.habbits.find((h) => h.habbitId === id);
+    if (!habitData) return;
 
-    // // Update local state
-    // setHabits((prev) =>
-    //   prev.map((h) =>
-    //     h.habitId === id ? { ...h, actualCount: newActualCount } : h
-    //   )
-    // );
+    const newActualCount = Math.min(
+      habitData.habbitNeedCount,
+      habitData.habbitDidCount + 1
+    );
 
-    // // Update in snapshot
-    // await updateHabitCount(id, newActualCount);
+    // Update in snapshot
+    updateHabitCount(id, newActualCount);
+
+    const newSnapshotsArr = getDailySnapshots();
+    
+    // Update local state
+    setHabitSnapshots(newSnapshotsArr);
   };
 
   const handleDelete = async (id: string) => {
-    // setHabits((prev) => prev.filter((h) => h.habitId !== id));
-
-    // await deleteHabbit(id);
+    deleteHabbit(id);
+    
+    const newSnapshotsArr = getDailySnapshots();
+    
+    // Update local state
+    // dont remove from habits because this habit can be used in history
+    setHabitSnapshots(newSnapshotsArr);
   };
 
   const handleEdit = async (
-    habbit: IHabbit,
+    habitChanged: IHabbit,
     newNeedCount?: number,
     newActualCount?: number
   ) => {
-    // // Update habit text
-    // setHabits((prev) =>
-    //   prev.map((h) =>
-    //     h.habitId === habbit.id
-    //       ? {
-    //           habitId: habbit.id,
-    //           text: habbit.text,
-    //           needCount: newNeedCount || 1,
-    //           actualCount: newActualCount || 0,
-    //         }
-    //       : h
-    //   )
-    // );
+    updateHabitCount(habitChanged.id, newActualCount || 0);
+    updateHabitNeedCount(habitChanged.id, newNeedCount || 1);
 
-    // await updateHabitCount(habbit.id, newActualCount || 0);
-    // await updateHabitNeedCount(habbit.id, newNeedCount || 1);
+    // Update habit text if needed
+    updateHabit(habitChanged);
 
-    // // Update habit info
-    // await updateHabit(habbit);
+    const newSnapshotsArr = getDailySnapshots();
+    
+    // Update local state
+    setHabitSnapshots(newSnapshotsArr);
+    setHabits(habits.map((habit) => {
+      return habit.id === habitChanged.id ? habitChanged : habit
+    }));
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
+          <main className="p-4 pb-20">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
+              Loading...
+            </h1>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   const todayDisplayed = new Date().toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "long",
   });
 
-  const today = new Date().toISOString().split("T")[0];
-  const todaySnapshot = snapshots.find((s) => s.date === today);
+  const todaySnapshot = getTodaySnapshot();
   let displayHabits: DispalyHabbit[] = [];
   if (todaySnapshot) {
     for (const habit of todaySnapshot.habbits) {
