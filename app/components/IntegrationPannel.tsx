@@ -225,7 +225,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
             "Found data in existing spreadsheet, reinitializing local storage..."
           );
 
-          const parsedData = await parseSpreadsheetDataToHabits(
+          const parsedData = parseSpreadsheetDataToHabits(
             spreadsheetData
           );
 
@@ -938,7 +938,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
    * using spreadSheetData from agtument NOT USING PROPER METHODS
    * creates habits info and returns it
    */
-  const parseSpreadsheetDataToHabits = async (spreadsheetData: {
+  const parseSpreadsheetDataToHabits = (spreadsheetData: {
     headers: string[];
     dataRows: string[][];
   }) => {
