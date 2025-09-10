@@ -21,7 +21,7 @@ export const addHabit = async (habit: IHabbit): Promise<boolean> => {
       (existingHabit) => existingHabit.id === habit.id
     );
     if (habitExists) {
-      // console.error("Habit with this id already exists:", habit.id);
+      console.error("Habit with this id already exists:", habit.id);
       return false;
     }
 
