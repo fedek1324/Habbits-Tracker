@@ -35,6 +35,7 @@ type DispalyHabbit = {
 export default function Home() {
   const [habits, setHabits] = useState<Array<IHabbit>>([]);
   const [snapshots, setHabitSnapshots] = useState<Array<IDailySnapshot>>([]);
+  const [todaysSnapshot, setTodaysSnapshot] = useState<IDailySnapshot>();
   const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
@@ -64,17 +65,31 @@ export default function Home() {
       } else {
         setError("Could not connect to google");
       }
+      initializeHabitsLocalStorage(resultHabits, resultSnapshots);
     } else {
       resultHabits = habits;
       resultSnapshots = snapshots;
     }
     setHabits(resultHabits);
     setHabitSnapshots(resultSnapshots);
-    initializeHabitsLocalStorage(resultHabits, resultSnapshots);
   };
 
+  const initTodaysSnapshot = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const todaySnapshotExisted = snapshots.find((s) => s.date === today);
+    if (todaySnapshotExisted) {
+      return todaySnapshotExisted;
+    }
+    return await getTodaySnapshot();
+  }
+
   useEffect(() => {
-    getCurrentData()
+    getCurrentData().then(() => {
+      // ENSURE that todaySnapshot exists
+        initTodaysSnapshot().then(res => {
+          setTodaysSnapshot(res);
+        })
+    });
     if (spreadsheetId) {
       registerSyncFunction(() => manualSyncToSpreadsheet(currentUser?.key || ""));
     }
@@ -844,7 +859,7 @@ export default function Home() {
 
     return response;
   };
-  
+
 
   /**
    * using proper methods like addHabit and saveDailySnapshot initializesHabits
@@ -877,7 +892,7 @@ export default function Home() {
   const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
     await addHabit(newHabbit);
 
-    // Add to today's snapshot to local storage
+    // Add today's snapshot to local storage
     const todaySnapshot = await getTodaySnapshot();
 
     todaySnapshot.habbits.push({
@@ -891,6 +906,8 @@ export default function Home() {
 
     // Update local state
     setHabits([...habits, newHabbit]);
+
+
     setHabitSnapshots(newSnapshotsArr);
   };
 
@@ -951,11 +968,9 @@ export default function Home() {
     month: "long",
   });
 
-  const today = new Date().toISOString().split("T")[0];
-  const todaySnapshot = snapshots.find((s) => s.date === today);
   let displayHabits: DispalyHabbit[] = [];
-  if (todaySnapshot) {
-    for (const habit of todaySnapshot.habbits) {
+  if (todaysSnapshot) {
+    for (const habit of todaysSnapshot.habbits) {
       displayHabits.push({
         habitId: habit.habbitId,
         text: habits.find((h) => h.id === habit.habbitId)?.text || "No text",
