@@ -70,7 +70,10 @@ const executeSync = async () => {
  */
 export const triggerSync = (operationName?: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-    if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) reject();
+    if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) {
+      reject();
+      return;
+    }
 
     // Clear existing timer
     if (debounceTimer) {

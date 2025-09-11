@@ -81,6 +81,7 @@ export default function Home() {
     } else {
       resultHabits = habits;
       resultSnapshots = snapshots;
+      setGoogleState(GoogleState.NOT_CONNECTED);
     }
     setHabits(resultHabits);
     setHabitSnapshots(resultSnapshots);
@@ -862,11 +863,13 @@ export default function Home() {
   };
 
   const updateGoogle = async () => {
-    // Update google spreadsheet
-    setGoogleState(GoogleState.UPDATING);
-    // TODO handle error
-    await triggerSync();
-    setGoogleState(GoogleState.CONNECTED);
+    if (googleState === GoogleState.CONNECTED) {
+      // Update google spreadsheet
+      setGoogleState(GoogleState.UPDATING);
+      // TODO handle error
+      await triggerSync();
+      setGoogleState(GoogleState.CONNECTED);
+    }
   }
   
 
@@ -999,9 +1002,9 @@ export default function Home() {
               <div className="mb-4">
                 <IntegrationPannel
                   state={googleState}
-                  onGoogleStateChange={setGoogleState}
                   onRefreshTokenChange={setRefreshToken}
                   onAccessTokenChange={setAccessToken}
+                  spreadSheetUrl={spreadsheetUrl}
                 />
               </div>
 
