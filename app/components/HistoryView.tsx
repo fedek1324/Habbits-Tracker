@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import IHabbit from "@/types/habbit";
-import { getDailySnapshots, getHabit, getHabits } from "@/api";
+import { getDailySnapshots, getHabit, getHabits } from "@/services/apiLocalStorage";
 import { IoCheckmarkCircle } from "react-icons/io5";
 
 interface HistoryViewProps {}

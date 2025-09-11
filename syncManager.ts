@@ -7,7 +7,7 @@ import {
   getHabits as apiGetHabits,
   getTodaySnapshot as apiGetTodaySnapshot,
   saveDailySnapshot as apiSaveDailySnapshot,
-} from "./api";
+} from "./services/apiLocalStorage";
 
 /**
  * If false sync with google sheets will not be performed
@@ -64,28 +64,37 @@ const executeSync = async () => {
 };
 
 /**
- * Trigger sync with debouncing for batch operations
+ * Trigger sync with debouncing for batch operations.
+ * Rejects when sync fucntion is not set.
+ * Resolves when function was executed.
  */
-const triggerSync = (operationName?: string) => {
-  if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) return;
-
-  // Clear existing timer
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-  }
-
-  // Set new timer
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    if (!pending) {
-      executeSync();
+export const triggerSync = (operationName?: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) {
+      reject();
+      return;
     }
-  }, DEBOUNCE_MS);
 
-  console.log(
-    `⏱️ Sync scheduled in ${DEBOUNCE_MS}ms (debounced). 
-    Operation name: ${operationName}`
-  );
+    // Clear existing timer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    // Set new timer
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      if (!pending) {
+        executeSync().then(() => {
+          resolve();
+        });
+      }
+    }, DEBOUNCE_MS);
+
+    console.log(
+      `⏱️ Sync scheduled in ${DEBOUNCE_MS}ms (debounced). 
+      Operation name: ${operationName}`
+    );
+  })
 };
 
 /**
@@ -93,7 +102,7 @@ const triggerSync = (operationName?: string) => {
  */
 export const addHabit = async (
   ...args: Parameters<typeof apiAddHabit>
-): ReturnType<typeof apiAddHabit> => {
+): Promise<ReturnType<typeof apiAddHabit>> => {
   const result = await apiAddHabit(...args);
   if (result) {
     triggerSync("addHabit");
@@ -103,21 +112,21 @@ export const addHabit = async (
 
 export const updateHabit = async (
   ...args: Parameters<typeof apiUpdateHabit>
-): ReturnType<typeof apiUpdateHabit> => {
+): Promise<ReturnType<typeof apiUpdateHabit>> => {
   await apiUpdateHabit(...args);
   triggerSync("updateHabit");
 };
 
 export const deleteHabbit = async (
   ...args: Parameters<typeof apiDeleteHabbit>
-): ReturnType<typeof apiDeleteHabbit> => {
+): Promise<ReturnType<typeof apiDeleteHabbit>> => {
   await apiDeleteHabbit(...args);
   triggerSync("deleteHabbit");
 };
 
 export const updateHabitCount = async (
   ...args: Parameters<typeof apiUpdateHabitCount>
-): ReturnType<typeof apiUpdateHabitCount> => {
+): Promise<ReturnType<typeof apiUpdateHabitCount>> => {
   const result = await apiUpdateHabitCount(...args);
   if (result) {
     triggerSync("updateHabitCount");
@@ -127,7 +136,7 @@ export const updateHabitCount = async (
 
 export const updateHabitNeedCount = async (
   ...args: Parameters<typeof apiUpdateHabitNeedCount>
-): Promise<boolean> => {
+): Promise<ReturnType<typeof apiUpdateHabitNeedCount>> => {
   const result = await apiUpdateHabitNeedCount(...args);
   if (result) {
     triggerSync("updateHabitNeedCount");
@@ -137,7 +146,7 @@ export const updateHabitNeedCount = async (
 
 export const getHabits = async (
   ...args: Parameters<typeof apiGetHabits>
-): ReturnType<typeof apiGetHabits> => {
+): Promise<ReturnType<typeof apiGetHabits>> => {
   const result = await apiGetHabits(...args);
   // no need to sync with spreadsheet
   return result;
@@ -145,7 +154,7 @@ export const getHabits = async (
 
 export const getTodaySnapshot = async (
   ...args: Parameters<typeof apiGetTodaySnapshot>
-): ReturnType<typeof apiGetTodaySnapshot> => {
+): Promise<ReturnType<typeof apiGetTodaySnapshot>> => {
   const result = await apiGetTodaySnapshot(...args);
   // apiGetTodaySnapshot can create todays snapshot so sync
   if (result) {
@@ -156,7 +165,7 @@ export const getTodaySnapshot = async (
 
 export const saveDailySnapshot = async (
   ...args: Parameters<typeof apiSaveDailySnapshot>
-): ReturnType<typeof apiSaveDailySnapshot> => {
+): Promise<ReturnType<typeof apiSaveDailySnapshot>> => {
   const result = await apiSaveDailySnapshot(...args);
   if (result) {
     triggerSync("saveDailySnapshot");

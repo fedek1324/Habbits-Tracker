@@ -18,12 +18,14 @@ automatically use Sync now when habit data changes
 on disconnect refresh the page
 instead of registerSyncFunction(() => manualSyncToSpreadsheet(newAccessToken)); use autorefresh access token if needed
 dont search for spreadsheet always but store streadsheet id
+let it be that under the hood eact google query gets access token from local storage and refreshs it if needed
+and eact google query stores pagesheet id
+mode google api functions to separate file
+read about hydration
 
 Use Redux
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
 add tests
 Use css modules / styled components
 Use react lists
-add google sheets integration
 create type for date
-Use json server and dont use client components where it is possible
