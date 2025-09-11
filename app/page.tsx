@@ -105,9 +105,11 @@ export default function Home() {
   }, [spreadsheetId])
 
     /**
-   * Finds spreadSheet by accessToken and populates it with data
+   * Finds spreadSheet by accessToken and populates it with data from local storage
    */
   const manualSyncToSpreadsheet = async (accessToken: string) => {
+    const habits = getHabits();
+    const snapshots = getDailySnapshots();
     try {
       console.log("Manual sync: Pushing local data to spreadsheet...");
       setIsUpdatingSpreadsheet(true);
