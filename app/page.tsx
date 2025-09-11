@@ -53,8 +53,6 @@ export default function Home() {
 
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(null);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
-  const [isCreatingSpreadsheet, setIsCreatingSpreadsheet] = useState(false);
-  const [isUpdatingSpreadsheet, setIsUpdatingSpreadsheet] = useState(false);
 
   const SPREADSHEET_NAME = "My habits tracker";
 
@@ -113,7 +111,6 @@ export default function Home() {
     const snapshots = getDailySnapshots();
     try {
       console.log("Manual sync: Pushing local data to spreadsheet...");
-      setIsUpdatingSpreadsheet(true);
 
       // Search for existing spreadsheet by name
       const existingSpreadsheet = await findSpreadsheetByName(
@@ -140,7 +137,6 @@ export default function Home() {
         );
         console.log("✅ Successfully pushed local data to spreadsheet");
 
-        setIsUpdatingSpreadsheet(false);
         return {
           spreadsheetId: existingSpreadsheet.id,
           spreadsheetUrl: existingSpreadsheet.url,
@@ -154,7 +150,6 @@ export default function Home() {
       }
     } catch (error) {
       console.error("❌ Error during manual sync:", error);
-      setIsUpdatingSpreadsheet(false);
     }
   };
 
@@ -218,7 +213,6 @@ export default function Home() {
     habitSnapshots: IDailySnapshot[]
   ) => {
     // Create a new spreadsheet
-    setIsCreatingSpreadsheet(true);
     console.log("Creating new habits spreadsheet...");
 
     const response = await makeAuthenticatedRequest(
@@ -284,7 +278,6 @@ export default function Home() {
 
       if (existingSpreadsheet) {
         console.log("Found existing spreadsheet:", existingSpreadsheet.id);
-        setIsUpdatingSpreadsheet(true);
 
         // Update state with found spreadsheet info
         setSpreadsheetId(existingSpreadsheet.id);
@@ -317,13 +310,10 @@ export default function Home() {
             "No data found in existing spreadsheet, keeping current local data"
           );
         }
-        setIsUpdatingSpreadsheet(false);
       }
       return undefined;
     } catch (error) {
       console.error("❌ Error syncing with Google Sheets:", error);
-      setIsCreatingSpreadsheet(false);
-      setIsUpdatingSpreadsheet(false);
       return undefined;
     }
   };
