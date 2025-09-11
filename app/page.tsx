@@ -964,7 +964,7 @@ export default function Home() {
     );
   }
 
-  const todayDisplayed = new Date().toLocaleDateString("ru-RU", {
+  const todayDisplayed = new Date().toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
   });
@@ -991,8 +991,8 @@ export default function Home() {
             <>
               <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
                 {displayHabits.length > 0
-                  ? `Hello! Habits for today (${todayDisplayed}):`
-                  : "Hello! Add habit using the button below"}
+                  ? `Habits for today (${todayDisplayed}):`
+                  : "Add habit using the button below"}
               </h1>
 
               {/*Google integration panel */}
