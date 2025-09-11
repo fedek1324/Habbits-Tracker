@@ -18,7 +18,7 @@ import {
   getHabits,
   getTodaySnapshot,
   saveDailySnapshot,
-} from "@/api";
+} from "@/apiLocalStorage";
 
 import {
   registerSyncFunction
@@ -27,7 +27,7 @@ import {
 import IHabbit from "@/types/habbit";
 import User from "@/types/user";
 import IDailySnapshot from "@/types/dailySnapshot";
-import { getDailySnapshots } from "@/api";
+import { getDailySnapshots } from "@/apiLocalStorage";
 
 type DispalyHabbit = {
   habitId: string;

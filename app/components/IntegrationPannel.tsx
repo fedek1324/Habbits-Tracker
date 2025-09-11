@@ -8,7 +8,7 @@ import {
   getDailySnapshots,
   addHabit,
   saveDailySnapshot,
-} from "@/api";
+} from "@/apiLocalStorage";
 import IHabbit from "@/types/habbit";
 import IDailySnapshot from "@/types/dailySnapshot";
 import { registerSyncFunction } from "@/syncManager";
