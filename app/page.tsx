@@ -28,6 +28,7 @@ import IHabbit from "@/types/habbit";
 import User from "@/types/user";
 import IDailySnapshot from "@/types/dailySnapshot";
 import { getDailySnapshots } from "@/services/apiLocalStorage";
+import { GoogleState } from "@/types/googleState";
 
 type DispalyHabbit = {
   habitId: string;
@@ -44,7 +45,7 @@ export default function Home() {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
-  const [state, setState] = useState<string>("");
+  const [googleState, setGoogleState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
   const [mounted, setMounted] = useState(false);
 
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(null);
@@ -54,19 +55,20 @@ export default function Home() {
 
   const SPREADSHEET_NAME = "My habits tracker";
 
-  const getCurrentData = async () => {
-    const storedRefreshToken = localStorage.getItem("googleRefreshToken");
+  const getCurrentData = async (refreshToken: string | null) => {
     const habits = await getHabits();
     const snapshots = await getDailySnapshots();
     let resultHabits: IHabbit[] = [];
     let resultSnapshots: IDailySnapshot[] = [];
-    if (storedRefreshToken) {
-      setRefreshToken(storedRefreshToken);
-      const currentData = await getCurrentGoogleData(habits, snapshots);
+    if (refreshToken) {
+      setGoogleState(GoogleState.UPDATING);
+      const currentData = await getCurrentGoogleData(refreshToken, habits, snapshots);
       if (currentData) {
+        setGoogleState(GoogleState.CONNECTED);
         resultHabits = currentData.habits;
         resultSnapshots = currentData.snapshots;
       } else {
+        setGoogleState(GoogleState.ERROR);
         setError("Could not connect to google");
       }
     } else {
@@ -80,11 +82,16 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    getCurrentData()
-    if (spreadsheetId) {
-      registerSyncFunction(() => manualSyncToSpreadsheet(currentUser?.key || ""));
-    }
+    const storedRefreshToken = localStorage.getItem("googleRefreshToken");
+    setRefreshToken(storedRefreshToken);
   }, []);
+
+  useEffect(() => {
+    getCurrentData(refreshToken)
+    // if (spreadsheetId) {
+    //   registerSyncFunction(() => manualSyncToSpreadsheet(currentUser?.key || ""));
+    // }
+  }, [refreshToken]);
 
     /**
    * Finds spreadSheet by accessToken and populates it with data
@@ -143,52 +150,45 @@ export default function Home() {
    * If table doesn't exist create table with data from arguments.
    * If something went wrong return undefined.
    */
-  const getCurrentGoogleData = async (habits: IHabbit[], habitSnapshots: IDailySnapshot[]) : Promise<{
+  const getCurrentGoogleData = async (refreshToken:string, habits: IHabbit[], habitSnapshots: IDailySnapshot[]) : Promise<{
     snapshots: IDailySnapshot[],
     habits: IHabbit[]
   } | undefined> => {
-    const storedRefreshToken = localStorage.getItem("googleRefreshToken");
-    if (storedRefreshToken) {
-      console.log(
-        "✅ Found stored refresh token, attempting to get fresh access token..."
-      );
-      setRefreshToken(storedRefreshToken);
-
+    if (refreshToken) {
       // Automatically try to get a fresh access token
-      refreshAccessToken(storedRefreshToken).then(async (newAccessToken) => {
-        if (newAccessToken) {
-          console.log(
-            "✅ Successfully refreshed access token from stored refresh token"
-          );
-          setCurrentUser({ key: newAccessToken });
+      const newAccessToken = await refreshAccessToken(refreshToken)
+      if (newAccessToken) {
+        console.log(
+          "✅ Successfully refreshed access token from stored refresh token"
+        );
+        setAccessToken(newAccessToken);
 
-          // Sync with google: use google data
-          const googleData = await getGoogleDataUseToken(newAccessToken);
-          if (googleData === undefined) {
-            const spreadSheet = await createGoogleSpreadSheet(
-              newAccessToken,
-              habits,
-              habitSnapshots
-            );
-            if (!spreadSheet) {
-              // throw new Error("Spreadsheet couldn't be created");
-              return undefined;
-            }
-            return { habits, snapshots: habitSnapshots };
-          } else {
-            return googleData;
+        // Sync with google: use google data
+        const googleData = await getGoogleDataUseToken(newAccessToken);
+        if (googleData === undefined) {
+          const spreadSheet = await createGoogleSpreadSheet(
+            newAccessToken,
+            habits,
+            habitSnapshots
+          );
+          if (!spreadSheet) {
+            // throw new Error("Spreadsheet couldn't be created");
+            return undefined;
           }
-
-          // Register update functon
-          // registerSyncFunction(() => manualSyncToSpreadsheet(newAccessToken));
+          return { habits, snapshots: habitSnapshots };
         } else {
-          console.log(
-            "❌ Failed to refresh access token, removing stored refresh token"
-          );
-          localStorage.removeItem("googleRefreshToken");
-          setRefreshToken(null);
+          return googleData;
         }
-      });
+
+        // Register update functon
+        // registerSyncFunction(() => manualSyncToSpreadsheet(newAccessToken));
+      } else {
+        console.log(
+          "❌ Failed to refresh access token, removing stored refresh token"
+        );
+        localStorage.removeItem("googleRefreshToken");
+        setRefreshToken(null);
+      }
     }
     return undefined;
   };
@@ -999,9 +999,10 @@ export default function Home() {
               {/*Google integration panel */}
               <div className="mb-4">
                 <IntegrationPannel
-                  state={state}
-                  setRefreshToken={setRefreshToken}
-                  setAccessToken={setAccessToken}
+                  state={googleState}
+                  onGoogleStateChange={setGoogleState}
+                  onRefreshTokenChange={setRefreshToken}
+                  onAccessTokenChange={setAccessToken}
                 />
               </div>
 
