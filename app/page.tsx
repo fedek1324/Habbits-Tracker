@@ -43,7 +43,6 @@ type DispalyHabbit = {
 export default function Home() {
   const [habits, setHabits] = useState<Array<IHabbit>>([]);
   const [snapshots, setHabitSnapshots] = useState<Array<IDailySnapshot>>([]);
-  const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -841,8 +840,7 @@ export default function Home() {
       const newAccessToken = await refreshAccessToken(refreshToken);
 
       if (newAccessToken) {
-        // Update user with new access token
-        setCurrentUser({ key: newAccessToken });
+        setAccessToken(newAccessToken);
 
         // Retry the request with new token
         return makeAuthenticatedRequest(url, options, newAccessToken, 1);
