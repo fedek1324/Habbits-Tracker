@@ -1,6 +1,6 @@
 "use client";
 
-import { addHabit } from "@/apiLocalStorage";
+import { addHabit } from "@/services/apiLocalStorage";
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
 import { FormEventHandler, useState } from "react";

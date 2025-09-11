@@ -1,7 +1,7 @@
 "use client"
 
-import IHabbit from "./types/habbit";
-import IDailySnapshot from "./types/dailySnapshot";
+import IHabbit from "../types/habbit";
+import IDailySnapshot from "../types/dailySnapshot";
 
 // Storage keys for localStorage
 const HABITS_STORAGE_KEY = "habits";
