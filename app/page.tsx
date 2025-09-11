@@ -18,10 +18,13 @@ import {
   getHabits,
   getTodaySnapshot,
   saveDailySnapshot,
+  fillHistory,
+  initializeHabitsLocalStorage,
 } from "@/services/apiLocalStorage";
 
 import {
-  registerSyncFunction
+  registerSyncFunction,
+  triggerSync
 } from "@/syncManager";
 
 import IHabbit from "@/types/habbit";
@@ -55,6 +58,10 @@ export default function Home() {
 
   const SPREADSHEET_NAME = "My habits tracker";
 
+  /**
+   * Gets data from google and sets panel and habits state.
+   * Then initializesLocalStorage data.
+   */
   const getCurrentData = async (refreshToken: string | null) => {
     const habits = await getHabits();
     const snapshots = await getDailySnapshots();
@@ -78,6 +85,7 @@ export default function Home() {
     setHabits(resultHabits);
     setHabitSnapshots(resultSnapshots);
     initializeHabitsLocalStorage(resultHabits, resultSnapshots);
+    fillHistory();
   };
 
   useEffect(() => {
@@ -87,11 +95,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    getCurrentData(refreshToken)
-    // if (spreadsheetId) {
-    //   registerSyncFunction(() => manualSyncToSpreadsheet(currentUser?.key || ""));
-    // }
+    getCurrentData(refreshToken);
   }, [refreshToken]);
+
+  useEffect(() => {
+    if (spreadsheetId && accessToken) {
+      registerSyncFunction(async () => await manualSyncToSpreadsheet(accessToken));
+    }
+  }, [spreadsheetId])
 
     /**
    * Finds spreadSheet by accessToken and populates it with data
@@ -171,6 +182,7 @@ export default function Home() {
             habits,
             habitSnapshots
           );
+
           if (!spreadSheet) {
             // throw new Error("Spreadsheet couldn't be created");
             return undefined;
@@ -249,8 +261,6 @@ export default function Home() {
     // Update state with new spreadsheet info
     setSpreadsheetId(spreadsheet.spreadsheetId);
     setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
-    setIsCreatingSpreadsheet(false);
-    setIsUpdatingSpreadsheet(false);
 
     return spreadsheet;
   };
@@ -850,35 +860,15 @@ export default function Home() {
 
     return response;
   };
+
+  const updateGoogle = async () => {
+    // Update google spreadsheet
+    setGoogleState(GoogleState.UPDATING);
+    // TODO handle error
+    await triggerSync();
+    setGoogleState(GoogleState.CONNECTED);
+  }
   
-
-  /**
-   * using proper methods like addHabit and saveDailySnapshot initializesHabits
-   */
-  const initializeHabitsLocalStorage = async (
-    habits: IHabbit[],
-    snapshots: IDailySnapshot[]
-  ) => {
-    try {
-      console.log("Initializing habits from spreadsheet data...");
-
-      // Add all habits to localStorage
-      for (const habit of habits) {
-        await addHabit(habit);
-      }
-
-      // Add all daily snapshots to localStorage
-      for (const snapshot of snapshots) {
-        await saveDailySnapshot(snapshot);
-      }
-
-      console.log("✅ Successfully initialized habits from spreadsheet");
-      return true;
-    } catch (error) {
-      console.error("❌ Error initializing habits:", error);
-      return false;
-    }
-  };
 
   const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
     addHabit(newHabbit);
@@ -898,6 +888,8 @@ export default function Home() {
     // Update local state
     setHabits([...habits, newHabbit]);
     setHabitSnapshots(newSnapshotsArr);
+
+    await updateGoogle();
   };
 
   const handleIncrement = async (id: string) => {
@@ -919,9 +911,12 @@ export default function Home() {
     
     // Update local state
     setHabitSnapshots(newSnapshotsArr);
+
+    await updateGoogle();
   };
 
   const handleDelete = async (id: string) => {
+    // Update local storage
     deleteHabbit(id);
     
     const newSnapshotsArr = getDailySnapshots();
@@ -929,6 +924,8 @@ export default function Home() {
     // Update local state
     // dont remove from habits because this habit can be used in history
     setHabitSnapshots(newSnapshotsArr);
+
+    await updateGoogle();
   };
 
   const handleEdit = async (
@@ -936,9 +933,9 @@ export default function Home() {
     newNeedCount?: number,
     newActualCount?: number
   ) => {
+    // Update local storage
     updateHabitCount(habitChanged.id, newActualCount || 0);
     updateHabitNeedCount(habitChanged.id, newNeedCount || 1);
-
     // Update habit text if needed
     updateHabit(habitChanged);
 
@@ -949,6 +946,8 @@ export default function Home() {
     setHabits(habits.map((habit) => {
       return habit.id === habitChanged.id ? habitChanged : habit
     }));
+
+    await updateGoogle();
   };
 
   if (!mounted) {

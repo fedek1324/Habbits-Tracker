@@ -294,3 +294,30 @@ export const updateHabitNeedCount = (
     return false;
   }
 };
+
+  /**
+   * using proper methods like addHabit and saveDailySnapshot initializesHabits
+   */
+  export const initializeHabitsLocalStorage = async (
+    habits: IHabbit[],
+    snapshots: IDailySnapshot[]
+  ) => {
+    try {
+      localStorage.removeItem(DAILY_SNAPSHOTS_STORAGE_KEY);
+      localStorage.removeItem(HABITS_STORAGE_KEY);
+
+      // Add all habits to localStorage
+      for (const habit of habits) {
+        addHabit(habit);
+      }
+
+      // Add all daily snapshots to localStorage
+      for (const snapshot of snapshots) {
+        saveDailySnapshot(snapshot);
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };

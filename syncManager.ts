@@ -64,28 +64,34 @@ const executeSync = async () => {
 };
 
 /**
- * Trigger sync with debouncing for batch operations
+ * Trigger sync with debouncing for batch operations.
+ * Rejects when sync fucntion is not set.
+ * Resolves when function was executed.
  */
-const triggerSync = (operationName?: string) => {
-  if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) return;
+export const triggerSync = (operationName?: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) reject();
 
-  // Clear existing timer
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-  }
-
-  // Set new timer
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    if (!pending) {
-      executeSync();
+    // Clear existing timer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
     }
-  }, DEBOUNCE_MS);
 
-  console.log(
-    `⏱️ Sync scheduled in ${DEBOUNCE_MS}ms (debounced). 
-    Operation name: ${operationName}`
-  );
+    // Set new timer
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      if (!pending) {
+        executeSync().then(() => {
+          resolve();
+        });
+      }
+    }, DEBOUNCE_MS);
+
+    console.log(
+      `⏱️ Sync scheduled in ${DEBOUNCE_MS}ms (debounced). 
+      Operation name: ${operationName}`
+    );
+  })
 };
 
 /**
