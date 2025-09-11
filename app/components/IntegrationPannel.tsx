@@ -1,17 +1,7 @@
-import User from "@/types/user";
 import { useGoogleLogin } from "@react-oauth/google";
 import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import {
-  getHabits,
-  getDailySnapshots,
-  addHabit,
-  saveDailySnapshot,
-} from "@/services/apiLocalStorage";
-import IHabbit from "@/types/habbit";
-import IDailySnapshot from "@/types/dailySnapshot";
-import { registerSyncFunction } from "@/syncManager";
 import { GoogleState } from "@/types/googleState";
 
 interface IntegrationPannelProps {
@@ -24,13 +14,6 @@ interface IntegrationPannelProps {
 const IntegrationPannel: React.FC<IntegrationPannelProps> = ({ state, onGoogleStateChange, onRefreshTokenChange, onAccessTokenChange }) => {
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
-
-  /**
-   * Clear spreadsheet info from state
-   */
-  const clearSpreadsheetInfo = () => {
-    localStorage.removeItem("googleRefreshToken");
-  };
 
   /**
    * login function
