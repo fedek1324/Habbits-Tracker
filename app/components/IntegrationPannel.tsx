@@ -9,6 +9,7 @@ interface IntegrationPannelProps {
   onRefreshTokenChange: (token: string | null) => void;
   onAccessTokenChange: (token: string | null) => void;
   spreadSheetUrl: string | null;
+  onSyncNowClick: () => void;
 }
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
@@ -16,6 +17,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   onRefreshTokenChange,
   onAccessTokenChange,
   spreadSheetUrl,
+  onSyncNowClick
 }) => {
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
@@ -167,17 +169,12 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
                   Open Spreadsheet
                 </button>
               )}
-              {/* <button
-                onClick={() => {
-                  if (currentUser?.key) {
-                    // Sync with google: use google data
-                    syncWithGoogleSheets(currentUser?.key).then(console.log);
-                  }
-                }}
+              <button
+                onClick={onSyncNowClick}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors duration-200"
               >
                 Sync Now
-              </button> */}
+              </button>
               <button
                 onClick={handleDisconnectButtonClick}
                 className="bg-white hover:bg-gray-50 text-green-600 text-sm px-4 py-2 rounded-lg font-medium border border-green-200 transition-colors duration-200"

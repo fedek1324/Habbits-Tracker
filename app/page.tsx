@@ -140,6 +140,10 @@ export default function Home() {
     }
   };
 
+  const handleSyncNowButtonClick = () => {
+    getCurrentData(refreshToken);
+  }
+
 
   /**
    * using refresh token from localStorage get access token and get google data.
@@ -973,6 +977,7 @@ export default function Home() {
                   onRefreshTokenChange={setRefreshToken}
                   onAccessTokenChange={setAccessToken}
                   spreadSheetUrl={spreadsheetUrl}
+                  onSyncNowClick={handleSyncNowButtonClick}
                 />
               </div>
 
