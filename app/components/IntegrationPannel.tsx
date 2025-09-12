@@ -84,7 +84,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   }
 
   return (
-    <div style={{ height: "170px", display: "flex", alignItems: "flex-start", width: "100%" }}>
+    <div style={{ height: "170px", display: "flex", alignItems: "center", width: "100%" }}>
       <div className="max-w-md mx-auto space-y-4 w-full">
         {/* Creating/Updating Spreadsheet State */}
         {isUpdating && (
