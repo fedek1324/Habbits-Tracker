@@ -13,7 +13,7 @@ import {
  * If false sync with google sheets will not be performed
  */
 const AUTO_SYNC_ENABLED = true;
-const DEBOUNCE_MS = 1000;
+const DEBOUNCE_MS = 500;
 
 /**
  * Function that we set from outside that will perform sync with google
@@ -25,6 +25,12 @@ let debounceTimer: NodeJS.Timeout | null = null;
  * If true query to google is performing
  */
 let pending = false;
+
+/**
+ * If syncToSpreadsheetFn was called to execute in time 
+ * of other query execute then suspend it and set hasQueue to true
+ */
+let hasQueue = false;
 
 /**
  * Register the sync function from IntegrationPanel
@@ -60,6 +66,11 @@ const executeSync = async () => {
     console.error("❌ Spreadsheet sync failed:", error);
   } finally {
     pending = false;
+
+    if (hasQueue) {
+      hasQueue = false;
+      await executeSync();
+    }
   }
 };
 
@@ -90,7 +101,8 @@ export const triggerSync = (operationName?: string): Promise<void> => {
           resolve();
         });
       } else {
-        console.warn("Pending is now. Operation aborted");
+        console.log("Pending is now. Operation suspended");
+        hasQueue = true;
       }
     }, DEBOUNCE_MS);
 
