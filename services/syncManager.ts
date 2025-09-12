@@ -7,7 +7,7 @@ import {
   getHabits as apiGetHabits,
   getTodaySnapshot as apiGetTodaySnapshot,
   saveDailySnapshot as apiSaveDailySnapshot,
-} from "./services/apiLocalStorage";
+} from "./apiLocalStorage";
 
 /**
  * If false sync with google sheets will not be performed

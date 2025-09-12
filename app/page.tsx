@@ -25,7 +25,7 @@ import {
 import {
   registerSyncFunction,
   triggerSync
-} from "@/syncManager";
+} from "@/services/syncManager";
 
 import IHabbit from "@/types/habbit";
 import IDailySnapshot from "@/types/dailySnapshot";
