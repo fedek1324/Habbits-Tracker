@@ -82,8 +82,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   }
 
   return (
-    <div /*style={{ height: "152px" }}*/>
-      <div className="max-w-md mx-auto space-y-4">
+    <div style={{ height: "152px", display: "flex", alignItems: "flex-start", width: "100%" }}>
+      <div className="max-w-md mx-auto space-y-4 w-full">
         {/* Creating/Updating Spreadsheet State */}
         {isUpdating && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-sm">
