@@ -28,7 +28,6 @@ import {
 } from "@/syncManager";
 
 import IHabbit from "@/types/habbit";
-import User from "@/types/user";
 import IDailySnapshot from "@/types/dailySnapshot";
 import { getDailySnapshots } from "@/services/apiLocalStorage";
 import { GoogleState } from "@/types/googleState";
@@ -39,6 +38,13 @@ type DispalyHabbit = {
   needCount: number;
   actualCount: number;
 };
+
+
+type SpreadSheetData = {
+  majorDimension: "ROWS",
+  range: string,
+  values: Array<Array<string>> | undefined
+}
 
 export default function Home() {
   const [habits, setHabits] = useState<Array<IHabbit>>([]);
@@ -102,8 +108,9 @@ export default function Home() {
     }
   }, [spreadsheetId])
 
-    /**
-   * Finds spreadSheet by accessToken and populates it with data from local storage
+
+  /**
+   * Populates spreadSheet it with data from local storage
    */
   const manualSyncToSpreadsheet = async (accessToken: string) => {
     const habits = getHabits();
@@ -111,41 +118,22 @@ export default function Home() {
     try {
       console.log("Manual sync: Pushing local data to spreadsheet...");
 
-      // Search for existing spreadsheet by name
-      const existingSpreadsheet = await findSpreadsheetByName(
-        accessToken,
-        SPREADSHEET_NAME
-      );
-
-      if (existingSpreadsheet) {
-        console.log(
-          "Found spreadsheet for manual sync:",
-          existingSpreadsheet.id
-        );
-
-        // Update state with found spreadsheet info
-        setSpreadsheetId(existingSpreadsheet.id);
-        setSpreadsheetUrl(existingSpreadsheet.url);
-
+      if (spreadsheetId) {
         // Push local data to spreadsheet (don't read from spreadsheet)
         await populateSpreadsheetWithHabits(
           accessToken,
-          existingSpreadsheet.id,
+          spreadsheetId,
           habits,
           snapshots
         );
         console.log("✅ Successfully pushed local data to spreadsheet");
-
-        return {
-          spreadsheetId: existingSpreadsheet.id,
-          spreadsheetUrl: existingSpreadsheet.url,
-        };
+        return;
       } else {
         // If no spreadsheet exists, create one
-        console.log(
-          "No spreadsheet found, creating new one for manual sync..."
+        console.warn(
+          "No spreadsheetId found in manualSyncToSpreadsheet"
         );
-        return await createGoogleSpreadSheet(accessToken, habits, snapshots);
+        return;
       }
     } catch (error) {
       console.error("❌ Error during manual sync:", error);
@@ -188,9 +176,6 @@ export default function Home() {
         } else {
           return googleData;
         }
-
-        // Register update functon
-        // registerSyncFunction(() => manualSyncToSpreadsheet(newAccessToken));
       } else {
         console.log(
           "❌ Failed to refresh access token, removing stored refresh token"
@@ -291,19 +276,13 @@ export default function Home() {
           existingSpreadsheet.id
         );
 
-        if (spreadsheetData && spreadsheetData.dataRows.length > 0) {
-          console.log(
-            "Found data in existing spreadsheet, reinitializing local storage..."
-          );
-
+        if (spreadsheetData) {
           const parsedData = parseSpreadsheetDataToHabits(spreadsheetData);
 
-          if (parsedData.habits.length > 0) {
-            console.log(
-              "✅ Successfully reinitialized habits from existing spreadsheet"
-            );
-            return parsedData;
-          }
+          console.log(
+            "✅ Successfully reinitialized habits from existing spreadsheet"
+          );
+          return parsedData;
         } else {
           console.log(
             "No data found in existing spreadsheet, keeping current local data"
@@ -444,12 +423,12 @@ export default function Home() {
         );
       }
 
-      const data = await dataResponse.json();
+      const data: SpreadSheetData = await dataResponse.json();
       const rows = data.values;
 
       if (!rows || rows.length === 0) {
         console.log("Spreadsheet is empty");
-        return null;
+        return { headers: [], dataRows: []};
       }
 
       console.log("Successfully read spreadsheet data:", rows.length, "rows");

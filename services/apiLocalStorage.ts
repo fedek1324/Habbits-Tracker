@@ -33,7 +33,6 @@ export const addHabit = (habit: IHabbit): boolean => {
     // Save updated list to localStorage
     localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updatedHabits));
 
-    console.log("Habit successfully added:", habit);
     return true;
   } catch (error) {
     console.error("Error adding habit to localStorage:", error);
