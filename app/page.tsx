@@ -521,8 +521,8 @@ export default function Home() {
       // Get daily snapshots (historical data) and habits (for names)
       const snapshots = habitSnapshots;
 
-      console.log("Found snapshots:", snapshots.length);
-      console.log("Found habits:", habits.length);
+      console.log("Uploading snapshots:", snapshots);
+      console.log("Uploading habits:", habits);
 
       if (snapshots.length === 0 && habits.length === 0) {
         console.log("No data found to populate");
@@ -850,12 +850,13 @@ export default function Home() {
     return response;
   };
 
-  const updateGoogle = async () => {
-    if (googleState === GoogleState.CONNECTED) {
+  const updateGoogle = async (operation? : string) => {
+    console.log("updateGoogle called with operation " + operation);
+    if (googleState !== GoogleState.NOT_CONNECTED) {
       // Update google spreadsheet
       setGoogleState(GoogleState.UPDATING);
       // TODO handle error
-      await triggerSync();
+      await triggerSync(operation);
       setGoogleState(GoogleState.CONNECTED);
     }
   }
@@ -880,7 +881,7 @@ export default function Home() {
     setHabits([...habits, newHabbit]);
     setHabitSnapshots(newSnapshotsArr);
 
-    await updateGoogle();
+    await updateGoogle("handleAdd");
   };
 
   const handleIncrement = async (id: string) => {
@@ -903,7 +904,7 @@ export default function Home() {
     // Update local state
     setHabitSnapshots(newSnapshotsArr);
 
-    await updateGoogle();
+    await updateGoogle("handleIncrement");
   };
 
   const handleDelete = async (id: string) => {
@@ -916,7 +917,7 @@ export default function Home() {
     // dont remove from habits because this habit can be used in history
     setHabitSnapshots(newSnapshotsArr);
 
-    await updateGoogle();
+    await updateGoogle("handleDelete");
   };
 
   const handleEdit = async (
@@ -938,7 +939,7 @@ export default function Home() {
       return habit.id === habitChanged.id ? habitChanged : habit
     }));
 
-    await updateGoogle();
+    await updateGoogle("handleEdit");
   };
 
   if (!mounted) {

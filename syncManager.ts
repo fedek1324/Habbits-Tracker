@@ -69,7 +69,9 @@ const executeSync = async () => {
  * Resolves when function was executed.
  */
 export const triggerSync = (operationName?: string): Promise<void> => {
+  console.log("triggerSync called with operation " + operationName);
   return new Promise((resolve, reject) => {
+    console.log("Promise triggerSync called with operation " + operationName);
     if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) {
       reject();
       return;
@@ -87,6 +89,8 @@ export const triggerSync = (operationName?: string): Promise<void> => {
         executeSync().then(() => {
           resolve();
         });
+      } else {
+        console.warn("Pending is now. Operation aborted");
       }
     }, DEBOUNCE_MS);
 

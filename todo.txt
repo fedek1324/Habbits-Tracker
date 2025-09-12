@@ -27,6 +27,11 @@ the right. And that new column will take that 1/3 which was after space.
 
 after one hour token expires and sync stops working
 
+direct google spreadsheet changes in runtime are not handled:
+when I change data in spreadsheet in runtime and then I change 
+something in habits some old data from local state pushes to google
+seen when i delete column in google but there was habit in local storage
+
 Use Redux
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
 add tests
