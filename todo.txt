@@ -34,7 +34,8 @@ seen when i delete column in google but there was habit in local storage
 
 Use Redux
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
-add tests
+add tests (unit and e2e)
+test parse from google spreadsheet to habits and snapshots function
 Use css modules / styled components
 Use react lists
 create type for date

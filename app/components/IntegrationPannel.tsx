@@ -3,6 +3,7 @@ import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { GoogleState } from "@/types/googleState";
+import { useGoogle } from "@/hooks/useGoogle";
 
 interface IntegrationPannelProps {
   state: GoogleState;
@@ -22,7 +23,9 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 
-  /**
+  const { setGoogleRefreshToken, setGoolgeAccessToken } = useGoogle();
+  
+    /**
    * login function
    */
   const login = useGoogleLogin({
@@ -40,20 +43,13 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
       const { access_token, refresh_token } = tokenResponse.data;
 
-      if (access_token) {
+      if (access_token && refresh_token) {
         console.log(
-          "✅ Access token received - can proceed with Google Sheets integration"
+          "✅ Access and refrest tokens received - can proceed with Google Sheets integration"
         );
 
-        // Store refresh token if available
-        if (refresh_token) {
-          console.log("✅ Refresh token also received");
-          onRefreshTokenChange(refresh_token);
-          localStorage.setItem("googleRefreshToken", refresh_token);
-        }
-
-        // Update user state with access token
-        onAccessTokenChange(access_token);
+        setGoogleRefreshToken(refresh_token);
+        setGoolgeAccessToken(access_token);
       } else {
         console.log("❌ No access token received");
       }

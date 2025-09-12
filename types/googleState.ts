@@ -1,5 +1,6 @@
 export const GoogleState = {
   NOT_CONNECTED: "notConnected",
+  HAS_REFRESH_TOKEN: "hasRefreshToken",
   UPDATING: "updating",
   CONNECTED: "connected", 
   ERROR: "error",
