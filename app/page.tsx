@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
 import IntegrationPannel from "./components/IntegrationPannel";
@@ -41,10 +41,10 @@ export default function Home() {
   const [habits, setHabits] = useState<Array<IHabbit>>([]);
   const [snapshots, setHabitSnapshots] = useState<Array<IDailySnapshot>>([]);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
   const [mounted, setMounted] = useState(false);
+
+  console.log("Home render");
 
   const {
     googleState,
@@ -52,34 +52,35 @@ export default function Home() {
     uploadDataToGoogle,
     spreadsheetId,
     spreadsheetUrl,
-  } = useGoogle(
-    (data) => {
-      if (data) {
-        // const { habits, snapshots } = data;
-        // setHabits(habits);
-        // setHabitSnapshots(snapshots);
-        // initializeHabitsLocalStorage(habits, snapshots);
-        // fillHistory();
-      }
-    },
-    (error) => {
-      setError(error);
-    }
-  );
+    setGoogleRefreshToken,
+    setGoolgeAccessToken,
+    loadedData,
+  } = useGoogle();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (spreadsheetId && accessToken) {
+    if (spreadsheetId) {
       registerSyncFunction(async () => await uploadDataToGoogle());
     }
   }, [spreadsheetId]);
 
-  const handleSyncNowButtonClick = () => {
+  useEffect(() => {
+    if (loadedData) {
+      const { habits, snapshots } = loadedData;
+      setHabits(habits);
+      setHabitSnapshots(snapshots);
+      initializeHabitsLocalStorage(habits, snapshots);
+      fillHistory();
+    }
+  }, [loadedData]);
+  
+
+  const handleSyncNowButtonClick = useCallback(() => {
     // getCurrentData();
-  };
+  }, []);
 
   const updateGoogle = async (operation?: string) => {
     console.log("updateGoogle called with operation " + operation);
@@ -220,10 +221,10 @@ export default function Home() {
               <div className="mb-4">
                 <IntegrationPannel
                   state={googleState}
-                  onRefreshTokenChange={setRefreshToken}
-                  onAccessTokenChange={setAccessToken}
                   spreadSheetUrl={spreadsheetUrl}
                   onSyncNowClick={handleSyncNowButtonClick}
+                  onSetGoogleRefreshToken={setGoogleRefreshToken}
+                  onSetGoogleAccessToken={setGoolgeAccessToken}
                 />
               </div>
 

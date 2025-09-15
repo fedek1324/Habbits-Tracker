@@ -84,7 +84,7 @@ export const triggerSync = (operationName?: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     console.log("Promise triggerSync called with operation " + operationName);
     if (!syncToSpreadsheetFn || !AUTO_SYNC_ENABLED) {
-      reject();
+      // reject();
       return;
     }
 

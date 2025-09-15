@@ -3,29 +3,27 @@ import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { GoogleState } from "@/types/googleState";
-import { useGoogle } from "@/hooks/useGoogle";
 
 interface IntegrationPannelProps {
   state: GoogleState;
-  onRefreshTokenChange: (token: string | null) => void;
-  onAccessTokenChange: (token: string | null) => void;
-  spreadSheetUrl: string | null;
+  spreadSheetUrl: string | undefined;
   onSyncNowClick: () => void;
+  onSetGoogleRefreshToken: (token: string) => void;
+  onSetGoogleAccessToken: (token: string) => void;
 }
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   state,
-  onRefreshTokenChange,
-  onAccessTokenChange,
   spreadSheetUrl,
-  onSyncNowClick
+  onSyncNowClick,
+  onSetGoogleRefreshToken,
+  onSetGoogleAccessToken
 }) => {
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 
-  const { setGoogleRefreshToken, setGoolgeAccessToken } = useGoogle();
-  
-    /**
+  console.log("rendering panel with state " + state + " spr url " + spreadSheetUrl);
+  /**
    * login function
    */
   const login = useGoogleLogin({
@@ -48,8 +46,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
           "✅ Access and refrest tokens received - can proceed with Google Sheets integration"
         );
 
-        setGoogleRefreshToken(refresh_token);
-        setGoolgeAccessToken(access_token);
+        onSetGoogleRefreshToken(refresh_token);
+        onSetGoogleAccessToken(access_token);
       } else {
         console.log("❌ No access token received");
       }
@@ -64,6 +62,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     login();
   }
 
+  const isHasRefreshToken = state === GoogleState.HAS_REFRESH_TOKEN;
   const isNotConnected = state === GoogleState.NOT_CONNECTED;
   const isUpdating = state === GoogleState.UPDATING;
   const isConnected = state === GoogleState.CONNECTED;
@@ -74,8 +73,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   };
 
   const handleDisconnectButtonClick = () => {
-    onRefreshTokenChange(null);
-    onAccessTokenChange(null);
+    onSetGoogleRefreshToken("");
+    onSetGoogleAccessToken("");
     localStorage.removeItem("googleRefreshToken");
   }
 
@@ -83,7 +82,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
     <div style={{ height: "170px", display: "flex", alignItems: "center", width: "100%" }}>
       <div className="max-w-md mx-auto space-y-4 w-full">
         {/* Creating/Updating Spreadsheet State */}
-        {isUpdating && (
+        {(isUpdating || isHasRefreshToken) && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -111,7 +110,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              {"Updating..."}
+              {isUpdating ? "Updating..." : "Has refresh token. Updating..."}
             </p>
           </div>
         )}
