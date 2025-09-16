@@ -7,7 +7,7 @@ This app is a modern, responsive habit tracking web application built with Next.
 🚀 Live Demo: https://habbits-tracker-six.vercel.app/
 
 ## 🔗 How to connect google
-1) Click Connect button on Google integration panel
+1) Click Connect button on Google Sheets panel
 2) Follow steps from video https://www.youtube.com/watch?v=cBDMrfv-Z2M
 
 ## ✨ Features
