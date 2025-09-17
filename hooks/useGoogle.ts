@@ -6,7 +6,7 @@ import { GoogleState } from "@/types/googleState";
 import IHabbit from "@/types/habbit";
 import IHabbitsData from "@/types/habitsData";
 import axios from "axios";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { flushSync } from "react-dom";
 
 type SpreadSheetData = {
@@ -120,13 +120,10 @@ const parseSpreadsheetDataToHabits = (spreadsheetData: {
 
 const SPREADSHEET_NAME = "My habits tracker";
 
-export const useGoogle = (
-  onDataLoad?: (data: IHabbitsData) => void,
-  onDataLoadError?: (error: string) => void
-) => {
+export const useGoogle = () => {
   const [state, setState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
 
-  const [accessToken, setAccessToken] = useState<string>();
+  const accessTokenRef = useRef<string>(undefined);
   const [refreshToken, setRefreshToken] = useState<string>(() => {
     // Only access localStorage on client side
     if (typeof window !== "undefined") {
@@ -149,6 +146,10 @@ export const useGoogle = (
       }
     });
   }, [refreshToken]);
+
+  const setAccessToken = (accessToken: string) => {
+    accessTokenRef.current = accessToken;
+  }
 
   const setRefreshTokenPublic = useCallback(
     (refreshToken: string | null): void => {
@@ -345,7 +346,7 @@ export const useGoogle = (
 
       return spreadsheet;
     },
-    [accessToken]
+    []
   );
 
   /**
@@ -362,7 +363,7 @@ export const useGoogle = (
         // Push local data to spreadsheet (don't read from spreadsheet)
         await populateSpreadsheetWithHabits(
           refreshToken ?? "",
-          accessToken ?? "",
+          accessTokenRef.current ?? "",
           spreadsheetId,
           habits,
           snapshots
@@ -380,7 +381,7 @@ export const useGoogle = (
       console.error("❌ Error during manual sync:", error);
       setState(GoogleState.ERROR);
     }
-  }, [refreshToken, accessToken, spreadsheetId]);
+  }, [refreshToken, spreadsheetId]);
 
   /**
    * fill spreadsheet with habits
@@ -704,7 +705,7 @@ export const useGoogle = (
           // Retry the request with new token
           return makeAuthenticatedRequest(
             refreshToken,
-            accessToken,
+            newAccessToken,
             url,
             options,
             1
@@ -837,7 +838,7 @@ export const useGoogle = (
         return null;
       }
     },
-    [accessToken]
+    []
   );
 
   return {

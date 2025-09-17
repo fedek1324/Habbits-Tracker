@@ -37,6 +37,8 @@ type DispalyHabbit = {
   actualCount: number;
 };
 
+let homeRenderCount = 0;
+
 export default function Home() {
   const [habits, setHabits] = useState<Array<IHabbit>>([]);
   const [snapshots, setHabitSnapshots] = useState<Array<IDailySnapshot>>([]);
@@ -44,7 +46,8 @@ export default function Home() {
   const [error, setError] = useState<string>("");
   const [mounted, setMounted] = useState(false);
 
-  console.log("Home render");
+  homeRenderCount++;
+  console.log("Home render. Total: " + homeRenderCount);
 
   const {
     googleState,

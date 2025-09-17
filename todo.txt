@@ -43,3 +43,4 @@ Use css modules / styled components
 Use react lists
 create type for date
 consider alternatives for fetch: https://react.dev/learn/synchronizing-with-effects#what-are-good-alternatives-to-data-fetching-in-effects
+consider RTK Query (TanStack Query) or SWR
