@@ -1,12 +1,11 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
 import IntegrationPannel from "./components/IntegrationPannel";
 import BottomNavigation from "./components/BottomNavigation";
 import HistoryView from "./components/HistoryView";
-import axios from "axios";
 
 // Import write operations from syncManager instead
 import {
@@ -49,7 +48,7 @@ export default function Home() {
 
   homeRenderCount++;
   console.log("Home render. Total: " + homeRenderCount);
-
+  
   const {
     googleState,
     getGoogleData,
@@ -61,12 +60,16 @@ export default function Home() {
     loadedData,
   } = useGoogle();
 
+  const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
+  
   useEffect(() => {
     setMounted(true);
   }, []);
 
   (useCallback(
-    () => registerSyncFunction(async () => await uploadDataToGoogle()),
+    () => {
+      registerSyncFunction(async () => await uploadDataToGoogle())
+    },
     [spreadsheetId]
   ))();
 
@@ -232,6 +235,7 @@ export default function Home() {
                   onSyncNowClick={handleSyncNowButtonClick}
                   onSetGoogleRefreshToken={setGoogleRefreshToken}
                   onSetGoogleAccessToken={setGoolgeAccessToken}
+                  getGoogleData={getGoogleData}
                 />
               </div>
 

@@ -9,6 +9,7 @@ interface IntegrationPannelProps {
   onSyncNowClick: () => void;
   onSetGoogleRefreshToken: (token: string) => void;
   onSetGoogleAccessToken: (token: string) => void;
+  getGoogleData: () => Promise<void>
 }
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
@@ -16,7 +17,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
   spreadSheetUrl,
   onSyncNowClick,
   onSetGoogleRefreshToken,
-  onSetGoogleAccessToken
+  onSetGoogleAccessToken,
+  getGoogleData,
 }) => {
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
@@ -47,6 +49,8 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
 
         onSetGoogleRefreshToken(refresh_token);
         onSetGoogleAccessToken(access_token);
+
+        await getGoogleData();
       } else {
         console.log("❌ No access token received");
       }

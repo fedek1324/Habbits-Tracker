@@ -124,7 +124,9 @@ export const useGoogle = () => {
 
   const accessTokenRef = useRef<string>(undefined);
   const refreshTokenRef = useRef<string>(
-    typeof window !== "undefined" ? localStorage.getItem("googleRefreshToken") || "" : ""
+    typeof window !== "undefined"
+      ? localStorage.getItem("googleRefreshToken") || ""
+      : ""
   );
 
   const [spreadsheetId, setSpreadsheetId] = useState<string>();
@@ -132,88 +134,172 @@ export const useGoogle = () => {
 
   const [loadedData, setLoadedData] = useState<IHabbitsData>();
 
+  let ignoreFetch = false;
 
-  useEffect(() => {
-    getGoogleData();
-  }, []);
+    /**
+   * use fetch with arguments and refrest access token if needed
+   */
+  const makeAuthenticatedRequest = useCallback(
+    async (
+      refreshToken: string,
+      accessToken: string,
+      url: string,
+      options: RequestInit,
+      retryCount = 0
+    ): Promise<Response> => {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-  const setAccessToken = (accessToken: string) => {
-    accessTokenRef.current = accessToken;
-  }
+      // If token expired and we have a refresh token, try to refresh
+      if (response.status === 401 && refreshToken && retryCount === 0) {
+        console.log("Access token expired, attempting to refresh...");
+        const newAccessToken = await refreshAccessToken(refreshToken);
 
-  const setRefreshToken = (refreshToken: string) => {
-    refreshTokenRef.current = refreshToken;
-  }
+        if (newAccessToken) {
+          setAccessToken(newAccessToken);
 
-  const setRefreshTokenPublic = useCallback(
-    (refreshToken: string | null): void => {
-      if (refreshToken) {
-        setState(GoogleState.HAS_REFRESH_TOKEN);
-      } else {
-        setState(GoogleState.NOT_CONNECTED);
+          // Retry the request with new token
+          return makeAuthenticatedRequest(
+            refreshToken,
+            newAccessToken,
+            url,
+            options,
+            1
+          );
+        }
       }
-      localStorage.setItem("googleRefreshToken", refreshToken || "");
-      setRefreshToken(refreshToken || "");
+
+      return response;
     },
     []
   );
 
-  /**
-   * using refresh token from localStorage get access token and get google data.
-   * If table doesn't exist create table with data from arguments.
-   * If something went wrong return undefined.
+    /**
+   * find SpreadSheet by name using accessToken
    */
-  const getDataCheckEmpty = useCallback(
-    async (
-      refreshTokenArg: string
-    ): Promise<
-      | {
-          snapshots: IDailySnapshot[];
-          habits: IHabbit[];
-        }
-      | undefined
-    > => {
-      const habits = getHabits();
-      const snapshots = getDailySnapshots();
-      if (refreshTokenArg) {
-        // Automatically try to get a fresh access token
-        const newAccessToken = await refreshAccessToken(refreshTokenArg);
-        if (newAccessToken) {
-          console.log(
-            "✅ Successfully refreshed access token from stored refresh token"
-          );
+  const findSpreadsheetByName = useCallback(
+    async (refreshToken: string, accessToken: string, name: string) => {
+      try {
+        console.log(`Searching for spreadsheet named: "${name}"`);
 
-          setAccessToken(newAccessToken);
-
-          const googleData = await getData(refreshTokenArg, newAccessToken);
-          if (googleData === undefined) {
-            const spreadSheet = await createGoogleSpreadSheet(
-              refreshTokenArg,
-              newAccessToken,
-              habits,
-              snapshots
-            );
-
-            if (!spreadSheet) {
-              // throw new Error("Spreadsheet couldn't be created");
-              return undefined;
-            }
-            return { habits, snapshots: snapshots };
-          } else {
-            return googleData;
+        // Search for spreadsheets with the specific name
+        const searchResponse = await makeAuthenticatedRequest(
+          refreshToken,
+          accessToken,
+          `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(
+            name
+          )}' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name,webViewLink)`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
           }
-        } else {
-          console.log(
-            "❌ Failed to refresh access token, removing stored refresh token"
+        );
+
+        if (!searchResponse.ok) {
+          throw new Error(
+            `Failed to search for spreadsheet: ${searchResponse.status}`
           );
-          localStorage.removeItem("googleRefreshToken");
-          setRefreshToken("");
-          return undefined;
         }
+
+        const searchData = await searchResponse.json();
+        const files = searchData.files;
+
+        if (files && files.length > 0) {
+          // If multiple spreadsheets with same name exist, take the first one
+          const spreadsheet = files[0];
+          console.log(
+            `✅ Found existing spreadsheet: ${spreadsheet.name} (ID: ${spreadsheet.id})`
+          );
+          return {
+            id: spreadsheet.id,
+            url: spreadsheet.webViewLink,
+          };
+        } else {
+          console.log(`No spreadsheet found with name: "${name}"`);
+          return null;
+        }
+      } catch (error) {
+        console.error("❌ Error searching for spreadsheet:", error);
+        return null;
       }
-      return { habits, snapshots };
     },
-    []
+    [makeAuthenticatedRequest]
+  );
+
+    /**
+   * using spreadSheetId and accessToken reads spreadSheet content
+   */
+  const readExistingSpreadsheetData = useCallback(
+    async (
+      refreshToken: string,
+      accessToken: string,
+      spreadsheetId: string
+    ) => {
+      try {
+        console.log("Reading existing spreadsheet data...");
+
+        // First get the spreadsheet metadata to find the sheet range
+        const metadataResponse = await makeAuthenticatedRequest(
+          refreshToken,
+          accessToken,
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!metadataResponse.ok) {
+          throw new Error(
+            `Failed to get spreadsheet metadata: ${metadataResponse.status}`
+          );
+        }
+
+        const metadata = await metadataResponse.json();
+        const sheet = metadata.sheets[0];
+        const sheetTitle = sheet.properties.title;
+
+        // Read all data from the sheet
+        const dataResponse = await makeAuthenticatedRequest(
+          refreshToken,
+          accessToken,
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetTitle}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!dataResponse.ok) {
+          throw new Error(
+            `Failed to read spreadsheet data: ${dataResponse.status}`
+          );
+        }
+
+        const data: SpreadSheetData = await dataResponse.json();
+        const rows = data.values;
+
+        if (!rows || rows.length === 0) {
+          console.log("Spreadsheet is empty");
+          return { headers: [], dataRows: [] };
+        }
+
+        console.log("Successfully read spreadsheet data:", rows.length, "rows");
+        return { headers: rows[0], dataRows: rows.slice(1) };
+      } catch (error) {
+        console.error("❌ Error reading spreadsheet data:", error);
+        return null;
+      }
+    },
+    [makeAuthenticatedRequest]
   );
 
   const getData = useCallback(
@@ -275,121 +361,8 @@ export const useGoogle = () => {
         return undefined;
       }
     },
-    []
+    [findSpreadsheetByName, readExistingSpreadsheetData]
   );
-
-  const getGoogleData = async () => {
-    if (refreshTokenRef.current) {
-      setState(GoogleState.UPDATING);
-      getDataCheckEmpty(refreshTokenRef.current).then((res) => {
-        if (res) {
-          setLoadedData(res);
-          setState(GoogleState.CONNECTED);
-        }
-      }).catch((error) => {
-        setState(GoogleState.ERROR);
-      });
-    }
-  }
-
-  /**
-   *
-   * @returns spreadSheet object
-   */
-  const createGoogleSpreadSheet = useCallback(
-    async (
-      refreshToken: string,
-      accessToken: string,
-      habits: IHabbit[],
-      habitSnapshots: IDailySnapshot[]
-    ) => {
-      // Create a new spreadsheet
-      console.log("Creating new habits spreadsheet...");
-
-      const response = await makeAuthenticatedRequest(
-        refreshToken,
-        accessToken,
-        "https://sheets.googleapis.com/v4/spreadsheets",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            properties: {
-              title: SPREADSHEET_NAME,
-            },
-            sheets: [
-              {
-                properties: {
-                  title: "Habits Data",
-                },
-              },
-            ],
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to create spreadsheet: ${response.statusText}`);
-      }
-
-      const spreadsheet = await response.json();
-      console.log("✅ Spreadsheet created successfully:", spreadsheet);
-      console.log("📝 Spreadsheet ID:", spreadsheet.spreadsheetId);
-      console.log("🔗 Spreadsheet URL:", spreadsheet.spreadsheetUrl);
-
-      // Populate with existing habits data (this will also set up headers)
-      await populateSpreadsheetWithHabits(
-        refreshToken,
-        accessToken,
-        spreadsheet.spreadsheetId,
-        habits,
-        habitSnapshots
-      );
-
-      // Update state with new spreadsheet info
-      setSpreadsheetId(spreadsheet.spreadsheetId);
-      setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
-
-      return spreadsheet;
-    },
-    []
-  );
-
-  /**
-   * Populates spreadSheet it with data from local storage
-   */
-  const uploadData = useCallback(async () => {
-    setState(GoogleState.UPDATING);
-    const habits = getHabits();
-    const snapshots = getDailySnapshots();
-    try {
-      console.log("Manual sync: Pushing local data to spreadsheet...");
-
-      if (spreadsheetId) {
-        // Push local data to spreadsheet (don't read from spreadsheet)
-        await populateSpreadsheetWithHabits(
-          refreshTokenRef.current ?? "",
-          accessTokenRef.current ?? "",
-          spreadsheetId,
-          habits,
-          snapshots
-        );
-        console.log("✅ Successfully pushed local data to spreadsheet");
-        setState(GoogleState.CONNECTED);
-        return;
-      } else {
-        // If no spreadsheet exists, create one
-        console.error("No spreadsheetId found in manualSyncToSpreadsheet");
-        setState(GoogleState.ERROR);
-        return;
-      }
-    } catch (error) {
-      console.error("❌ Error during manual sync:", error);
-      setState(GoogleState.ERROR);
-    }
-  }, [spreadsheetId]);
 
   /**
    * fill spreadsheet with habits
@@ -680,174 +653,215 @@ export const useGoogle = () => {
         console.error("❌ Error populating spreadsheet with habits:", error);
       }
     },
-    []
+    [makeAuthenticatedRequest]
   );
 
-  /**
-   * use fetch with arguments and refrest access token if needed
+    /**
+   *
+   * @returns spreadSheet object
    */
-  const makeAuthenticatedRequest = useCallback(
+  const createGoogleSpreadSheet = useCallback(
     async (
       refreshToken: string,
       accessToken: string,
-      url: string,
-      options: RequestInit,
-      retryCount = 0
-    ): Promise<Response> => {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...options.headers,
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      habits: IHabbit[],
+      habitSnapshots: IDailySnapshot[]
+    ) => {
+      // Create a new spreadsheet
+      console.log("Creating new habits spreadsheet...");
 
-      // If token expired and we have a refresh token, try to refresh
-      if (response.status === 401 && refreshToken && retryCount === 0) {
-        console.log("Access token expired, attempting to refresh...");
-        const newAccessToken = await refreshAccessToken(refreshToken);
+      const response = await makeAuthenticatedRequest(
+        refreshToken,
+        accessToken,
+        "https://sheets.googleapis.com/v4/spreadsheets",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            properties: {
+              title: SPREADSHEET_NAME,
+            },
+            sheets: [
+              {
+                properties: {
+                  title: "Habits Data",
+                },
+              },
+            ],
+          }),
+        }
+      );
 
+      if (!response.ok) {
+        throw new Error(`Failed to create spreadsheet: ${response.statusText}`);
+      }
+
+      const spreadsheet = await response.json();
+      console.log("✅ Spreadsheet created successfully:", spreadsheet);
+      console.log("📝 Spreadsheet ID:", spreadsheet.spreadsheetId);
+      console.log("🔗 Spreadsheet URL:", spreadsheet.spreadsheetUrl);
+
+      // Populate with existing habits data (this will also set up headers)
+      await populateSpreadsheetWithHabits(
+        refreshToken,
+        accessToken,
+        spreadsheet.spreadsheetId,
+        habits,
+        habitSnapshots
+      );
+
+      // Update state with new spreadsheet info
+      setSpreadsheetId(spreadsheet.spreadsheetId);
+      setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
+
+      return spreadsheet;
+    },
+    [makeAuthenticatedRequest, populateSpreadsheetWithHabits]
+  );
+
+  /**
+   * using refresh token from localStorage get access token and get google data.
+   * If table doesn't exist create table with data from arguments.
+   * If something went wrong return undefined.
+   */
+  const getDataCheckEmpty = useCallback(
+    async (
+      refreshTokenArg: string
+    ): Promise<
+      | {
+          snapshots: IDailySnapshot[];
+          habits: IHabbit[];
+        }
+      | undefined
+    > => {
+      const habits = getHabits();
+      const snapshots = getDailySnapshots();
+      if (refreshTokenArg) {
+        // Automatically try to get a fresh access token
+        const newAccessToken = await refreshAccessToken(refreshTokenArg);
         if (newAccessToken) {
+          console.log(
+            "✅ Successfully refreshed access token from stored refresh token"
+          );
+
           setAccessToken(newAccessToken);
 
-          // Retry the request with new token
-          return makeAuthenticatedRequest(
-            refreshToken,
-            newAccessToken,
-            url,
-            options,
-            1
-          );
-        }
-      }
+          const googleData = await getData(refreshTokenArg, newAccessToken);
+          if (googleData === undefined) {
+            const spreadSheet = await createGoogleSpreadSheet(
+              refreshTokenArg,
+              newAccessToken,
+              habits,
+              snapshots
+            );
 
-      return response;
-    },
-    []
-  );
-
-  /**
-   * using spreadSheetId and accessToken reads spreadSheet content
-   */
-  const readExistingSpreadsheetData = useCallback(
-    async (
-      refreshToken: string,
-      accessToken: string,
-      spreadsheetId: string
-    ) => {
-      try {
-        console.log("Reading existing spreadsheet data...");
-
-        // First get the spreadsheet metadata to find the sheet range
-        const metadataResponse = await makeAuthenticatedRequest(
-          refreshToken,
-          accessToken,
-          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
+            if (!spreadSheet) {
+              // throw new Error("Spreadsheet couldn't be created");
+              return undefined;
+            }
+            return { habits, snapshots: snapshots };
+          } else {
+            return googleData;
           }
-        );
-
-        if (!metadataResponse.ok) {
-          throw new Error(
-            `Failed to get spreadsheet metadata: ${metadataResponse.status}`
-          );
-        }
-
-        const metadata = await metadataResponse.json();
-        const sheet = metadata.sheets[0];
-        const sheetTitle = sheet.properties.title;
-
-        // Read all data from the sheet
-        const dataResponse = await makeAuthenticatedRequest(
-          refreshToken,
-          accessToken,
-          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetTitle}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!dataResponse.ok) {
-          throw new Error(
-            `Failed to read spreadsheet data: ${dataResponse.status}`
-          );
-        }
-
-        const data: SpreadSheetData = await dataResponse.json();
-        const rows = data.values;
-
-        if (!rows || rows.length === 0) {
-          console.log("Spreadsheet is empty");
-          return { headers: [], dataRows: [] };
-        }
-
-        console.log("Successfully read spreadsheet data:", rows.length, "rows");
-        return { headers: rows[0], dataRows: rows.slice(1) };
-      } catch (error) {
-        console.error("❌ Error reading spreadsheet data:", error);
-        return null;
-      }
-    },
-    []
-  );
-
-  /**
-   * find SpreadSheet by name using accessToken
-   */
-  const findSpreadsheetByName = useCallback(
-    async (refreshToken: string, accessToken: string, name: string) => {
-      try {
-        console.log(`Searching for spreadsheet named: "${name}"`);
-
-        // Search for spreadsheets with the specific name
-        const searchResponse = await makeAuthenticatedRequest(
-          refreshToken,
-          accessToken,
-          `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(
-            name
-          )}' and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name,webViewLink)`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!searchResponse.ok) {
-          throw new Error(
-            `Failed to search for spreadsheet: ${searchResponse.status}`
-          );
-        }
-
-        const searchData = await searchResponse.json();
-        const files = searchData.files;
-
-        if (files && files.length > 0) {
-          // If multiple spreadsheets with same name exist, take the first one
-          const spreadsheet = files[0];
-          console.log(
-            `✅ Found existing spreadsheet: ${spreadsheet.name} (ID: ${spreadsheet.id})`
-          );
-          return {
-            id: spreadsheet.id,
-            url: spreadsheet.webViewLink,
-          };
         } else {
-          console.log(`No spreadsheet found with name: "${name}"`);
-          return null;
+          console.log(
+            "❌ Failed to refresh access token, removing stored refresh token"
+          );
+          localStorage.removeItem("googleRefreshToken");
+          setRefreshToken("");
+          return undefined;
         }
-      } catch (error) {
-        console.error("❌ Error searching for spreadsheet:", error);
-        return null;
       }
+      return { habits, snapshots };
+    },
+    [createGoogleSpreadSheet, getData]
+  );
+
+  const getGoogleData = useCallback(async () => {
+    if (refreshTokenRef.current) {
+      setState(GoogleState.UPDATING);
+      getDataCheckEmpty(refreshTokenRef.current)
+        .then((res) => {
+          if (res) {
+            if (!ignoreFetch) {
+              setLoadedData(res);
+              setState(GoogleState.CONNECTED);
+            }
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+          setState(GoogleState.ERROR);
+        });
+    }
+  }, [getDataCheckEmpty, ignoreFetch]);
+
+
+  useEffect(() => {    
+    getGoogleData();
+
+    return () => {
+      ignoreFetch = true;
+    }
+  }, [getGoogleData]);
+
+
+  const setAccessToken = (accessToken: string) => {
+    accessTokenRef.current = accessToken;
+  };
+
+  const setRefreshToken = (refreshToken: string) => {
+    refreshTokenRef.current = refreshToken;
+  };
+
+  const setRefreshTokenPublic = useCallback(
+    (refreshToken: string | null): void => {
+      if (refreshToken) {
+        setState(GoogleState.HAS_REFRESH_TOKEN);
+      } else {
+        setState(GoogleState.NOT_CONNECTED);
+      }
+      localStorage.setItem("googleRefreshToken", refreshToken || "");
+      setRefreshToken(refreshToken || "");
     },
     []
   );
+
+  /**
+   * Populates spreadSheet it with data from local storage
+   */
+  const uploadData = useCallback(async () => {
+    setState(GoogleState.UPDATING);
+    const habits = getHabits();
+    const snapshots = getDailySnapshots();
+    try {
+      console.log("Manual sync: Pushing local data to spreadsheet...");
+
+      if (spreadsheetId) {
+        // Push local data to spreadsheet (don't read from spreadsheet)
+        await populateSpreadsheetWithHabits(
+          refreshTokenRef.current ?? "",
+          accessTokenRef.current ?? "",
+          spreadsheetId,
+          habits,
+          snapshots
+        );
+        console.log("✅ Successfully pushed local data to spreadsheet");
+        setState(GoogleState.CONNECTED);
+        return;
+      } else {
+        // If no spreadsheet exists, create one
+        console.error("No spreadsheetId found in manualSyncToSpreadsheet");
+        setState(GoogleState.ERROR);
+        return;
+      }
+    } catch (error) {
+      console.error("❌ Error during manual sync:", error);
+      setState(GoogleState.ERROR);
+    }
+  }, [populateSpreadsheetWithHabits, spreadsheetId]);
 
   return {
     googleState: state,
