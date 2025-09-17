@@ -124,13 +124,9 @@ export const useGoogle = () => {
   const [state, setState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
 
   const accessTokenRef = useRef<string>(undefined);
-  const [refreshToken, setRefreshToken] = useState<string>(() => {
-    // Only access localStorage on client side
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("googleRefreshToken") || "";
-    }
-    return "";
-  });
+  const refreshTokenRef = useRef<string>(
+    typeof window !== "undefined" ? localStorage.getItem("googleRefreshToken") || "" : ""
+  );
 
   const [spreadsheetId, setSpreadsheetId] = useState<string>();
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string>();
@@ -138,17 +134,23 @@ export const useGoogle = () => {
   const [loadedData, setLoadedData] = useState<IHabbitsData>();
 
   useEffect(() => {
-    setState(GoogleState.UPDATING);
-    getDataCheckEmpty(refreshToken ?? "").then((res) => {
-      if (res) {
-        setLoadedData(res);
-        setState(GoogleState.CONNECTED);
-      }
-    });
-  }, [refreshToken]);
+    if (refreshTokenRef.current) {
+      setState(GoogleState.UPDATING);
+      getDataCheckEmpty(refreshTokenRef.current).then((res) => {
+        if (res) {
+          setLoadedData(res);
+          setState(GoogleState.CONNECTED);
+        }
+      });
+    }
+  }, []);
 
   const setAccessToken = (accessToken: string) => {
     accessTokenRef.current = accessToken;
+  }
+
+  const setRefreshToken = (refreshToken: string) => {
+    refreshTokenRef.current = refreshToken;
   }
 
   const setRefreshTokenPublic = useCallback(
@@ -362,7 +364,7 @@ export const useGoogle = () => {
       if (spreadsheetId) {
         // Push local data to spreadsheet (don't read from spreadsheet)
         await populateSpreadsheetWithHabits(
-          refreshToken ?? "",
+          refreshTokenRef.current ?? "",
           accessTokenRef.current ?? "",
           spreadsheetId,
           habits,
@@ -381,7 +383,7 @@ export const useGoogle = () => {
       console.error("❌ Error during manual sync:", error);
       setState(GoogleState.ERROR);
     }
-  }, [refreshToken, spreadsheetId]);
+  }, [spreadsheetId]);
 
   /**
    * fill spreadsheet with habits
