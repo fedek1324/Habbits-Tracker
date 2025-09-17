@@ -6,8 +6,8 @@ import { GoogleState } from "@/types/googleState";
 import IHabbit from "@/types/habbit";
 import IHabbitsData from "@/types/habitsData";
 import axios from "axios";
+import { error } from "console";
 import { useCallback, useEffect, useState, useRef } from "react";
-import { flushSync } from "react-dom";
 
 type SpreadSheetData = {
   majorDimension: "ROWS";
@@ -133,16 +133,9 @@ export const useGoogle = () => {
 
   const [loadedData, setLoadedData] = useState<IHabbitsData>();
 
+
   useEffect(() => {
-    if (refreshTokenRef.current) {
-      setState(GoogleState.UPDATING);
-      getDataCheckEmpty(refreshTokenRef.current).then((res) => {
-        if (res) {
-          setLoadedData(res);
-          setState(GoogleState.CONNECTED);
-        }
-      });
-    }
+    getGoogleData();
   }, []);
 
   const setAccessToken = (accessToken: string) => {
@@ -285,6 +278,20 @@ export const useGoogle = () => {
     },
     []
   );
+
+  const getGoogleData = async () => {
+    if (refreshTokenRef.current) {
+      setState(GoogleState.UPDATING);
+      getDataCheckEmpty(refreshTokenRef.current).then((res) => {
+        if (res) {
+          setLoadedData(res);
+          setState(GoogleState.CONNECTED);
+        }
+      }).catch((error) => {
+        setState(GoogleState.ERROR);
+      });
+    }
+  }
 
   /**
    *
@@ -845,7 +852,7 @@ export const useGoogle = () => {
 
   return {
     googleState: state,
-    getGoogleData: getData,
+    getGoogleData,
     uploadDataToGoogle: uploadData,
     setGoogleRefreshToken: setRefreshTokenPublic,
     setGoolgeAccessToken: setAccessToken,

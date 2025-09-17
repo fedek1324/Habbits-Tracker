@@ -64,11 +64,12 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (spreadsheetId) {
-      registerSyncFunction(async () => await uploadDataToGoogle());
-    }
-  }, [spreadsheetId]);
+  (useCallback(
+    () => registerSyncFunction(async () => await uploadDataToGoogle()),
+    []
+  ))();
+
+  // registerSyncFunction(async () => await uploadDataToGoogle())
 
   useEffect(() => {
     if (loadedData) {
@@ -79,10 +80,9 @@ export default function Home() {
       fillHistory();
     }
   }, [loadedData]);
-  
 
   const handleSyncNowButtonClick = useCallback(() => {
-    // getCurrentData();
+    getGoogleData();
   }, []);
 
   const updateGoogle = async (operation?: string) => {
