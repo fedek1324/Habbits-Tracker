@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
 import IntegrationPannel from "./components/IntegrationPannel";
@@ -45,6 +45,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   const [error, setError] = useState<string>("");
   const [mounted, setMounted] = useState(false);
+  const [today, setToday] = useState(new Date().toISOString().split("T")[0]);
 
   homeRenderCount++;
   console.log("Home render. Total: " + homeRenderCount);
@@ -66,7 +67,7 @@ export default function Home() {
 
   (useCallback(
     () => registerSyncFunction(async () => await uploadDataToGoogle()),
-    []
+    [spreadsheetId]
   ))();
 
   // registerSyncFunction(async () => await uploadDataToGoogle())
@@ -176,6 +177,22 @@ export default function Home() {
     await updateGoogle("handleEdit");
   };
 
+  const displayHabits: DispalyHabbit[] = useMemo(() => {
+    let res = []
+    const todaySnapshot = getTodaySnapshot();
+    if (todaySnapshot) {
+      for (const habit of todaySnapshot.habbits) {
+        res.push({
+          habitId: habit.habbitId,
+          text: habits.find((h) => h.id === habit.habbitId)?.text || "No text",
+          needCount: habit.habbitNeedCount,
+          actualCount: habit.habbitDidCount,
+        });
+      }
+    }
+    return res;
+  }, [today, habits, snapshots]);
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -194,19 +211,6 @@ export default function Home() {
     day: "numeric",
     month: "long",
   });
-
-  const todaySnapshot = getTodaySnapshot();
-  let displayHabits: DispalyHabbit[] = [];
-  if (todaySnapshot) {
-    for (const habit of todaySnapshot.habbits) {
-      displayHabits.push({
-        habitId: habit.habbitId,
-        text: habits.find((h) => h.id === habit.habbitId)?.text || "No text",
-        needCount: habit.habbitNeedCount,
-        actualCount: habit.habbitDidCount,
-      });
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gray-100">
