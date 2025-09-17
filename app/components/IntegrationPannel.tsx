@@ -1,6 +1,5 @@
 import { useGoogleLogin } from "@react-oauth/google";
-import { hasGrantedAllScopesGoogle } from "@react-oauth/google";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import axios from "axios";
 import { GoogleState } from "@/types/googleState";
 

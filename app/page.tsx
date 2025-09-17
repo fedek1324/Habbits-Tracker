@@ -20,15 +20,15 @@ import {
   saveDailySnapshot,
   fillHistory,
   initializeHabitsLocalStorage,
-} from "@/services/apiLocalStorage";
+} from "@/app/services/apiLocalStorage";
 
-import { registerSyncFunction, triggerSync } from "@/services/syncManager";
+import { registerSyncFunction, triggerSync } from "@/app/services/syncManager";
 
 import IHabbit from "@/types/habbit";
 import IDailySnapshot from "@/types/dailySnapshot";
-import { getDailySnapshots } from "@/services/apiLocalStorage";
+import { getDailySnapshots } from "@/app/services/apiLocalStorage";
 import { GoogleState } from "@/types/googleState";
-import { useGoogle } from "@/hooks/useGoogle";
+import { useGoogle } from "@/app/hooks/useGoogle";
 
 type DispalyHabbit = {
   habitId: string;

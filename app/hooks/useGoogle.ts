@@ -1,12 +1,11 @@
 "use client";
 
-import { getDailySnapshots, getHabits } from "@/services/apiLocalStorage";
+import { getDailySnapshots, getHabits } from "@/app/services/apiLocalStorage";
 import IDailySnapshot from "@/types/dailySnapshot";
 import { GoogleState } from "@/types/googleState";
 import IHabbit from "@/types/habbit";
 import IHabbitsData from "@/types/habitsData";
 import axios from "axios";
-import { error } from "console";
 import { useCallback, useEffect, useState, useRef } from "react";
 
 type SpreadSheetData = {
