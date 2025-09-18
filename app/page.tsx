@@ -47,7 +47,7 @@ export default function Home() {
 
   homeRenderCount++;
   console.log("Home render. Total: " + homeRenderCount);
-  
+
   const {
     googleState,
     getGoogleData,
@@ -59,8 +59,8 @@ export default function Home() {
   } = useGoogle(today);
 
   // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
-  
-  useEffect(() => {    
+
+  useEffect(() => {
     // for hydration bypass
     // leave render function pure
     const today = new Date();
@@ -76,17 +76,6 @@ export default function Home() {
     setHabitSnapshots(snapshots);
   }, []);
 
-  (useCallback(
-    () => {
-      if (today) {
-        registerSyncFunction(async () => await uploadDataToGoogle(today))
-      }
-    },
-    [uploadDataToGoogle, today]
-  ))();
-
-  // registerSyncFunction(async () => await uploadDataToGoogle())
-
   useEffect(() => {
     if (loadedData && today) {
       const { habits, snapshots } = loadedData;
@@ -97,6 +86,14 @@ export default function Home() {
       fillHistory(today);
     }
   }, [loadedData, today]);
+
+  useCallback(() => {
+    if (today) {
+      registerSyncFunction(async () => await uploadDataToGoogle(today));
+    }
+  }, [uploadDataToGoogle, today])();
+
+  // registerSyncFunction(async () => await uploadDataToGoogle())
 
   const handleSyncNowButtonClick = useCallback(() => {
     if (!today) {
@@ -213,7 +210,7 @@ export default function Home() {
       return;
     }
     await getGoogleData(today);
-  }
+  };
 
   const displayHabits: DispalyHabbit[] = useMemo(() => {
     if (!today) {
@@ -221,7 +218,9 @@ export default function Home() {
     }
     const res = [];
     const todayDay = today.toISOString().split("T")[0];
-    const todaySnapshot = snapshots.find((snapshot => snapshot.date === todayDay));
+    const todaySnapshot = snapshots.find(
+      (snapshot) => snapshot.date === todayDay
+    );
     if (todaySnapshot) {
       for (const habit of todaySnapshot.habbits) {
         res.push({
@@ -235,10 +234,12 @@ export default function Home() {
     return res;
   }, [today, habits, snapshots]);
 
-  const todayDisplayed = today ? today.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "long",
-  }) : "loading...";
+  const todayDisplayed = today
+    ? today.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+      })
+    : "loading...";
 
   return (
     <div className="min-h-screen bg-gray-100">
