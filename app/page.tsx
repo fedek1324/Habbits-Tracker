@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
 import IntegrationPannel from "./components/IntegrationPannel";
@@ -14,7 +14,6 @@ import {
   deleteHabbit,
   updateHabitCount,
   updateHabitNeedCount,
-  getHabits,
   getTodaySnapshot,
   saveDailySnapshot,
   fillHistory,
@@ -42,9 +41,9 @@ export default function Home() {
   const [habits, setHabits] = useState<Array<IHabbit>>([]);
   const [snapshots, setHabitSnapshots] = useState<Array<IDailySnapshot>>([]);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
-  const [error, setError] = useState<string>("");
+  // const [error, setError] = useState<string>("");
   const [mounted, setMounted] = useState(false);
-  const [today, setToday] = useState(new Date().toISOString().split("T")[0]);
+  const [today, setToday] = useState<Date>();
 
   homeRenderCount++;
   console.log("Home render. Total: " + homeRenderCount);
@@ -53,24 +52,25 @@ export default function Home() {
     googleState,
     getGoogleData,
     uploadDataToGoogle,
-    spreadsheetId,
     spreadsheetUrl,
     setGoogleRefreshToken,
     setGoolgeAccessToken,
     loadedData,
   } = useGoogle();
 
-  const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
+  // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
   
   useEffect(() => {
+    // for hydration bypass
     setMounted(true);
+    setToday(new Date());
   }, []);
 
   (useCallback(
     () => {
       registerSyncFunction(async () => await uploadDataToGoogle())
     },
-    [spreadsheetId]
+    [uploadDataToGoogle]
   ))();
 
   // registerSyncFunction(async () => await uploadDataToGoogle())
@@ -87,7 +87,7 @@ export default function Home() {
 
   const handleSyncNowButtonClick = useCallback(() => {
     getGoogleData();
-  }, []);
+  }, [getGoogleData]);
 
   const updateGoogle = async (operation?: string) => {
     console.log("updateGoogle called with operation " + operation);
@@ -181,7 +181,7 @@ export default function Home() {
   };
 
   const displayHabits: DispalyHabbit[] = useMemo(() => {
-    let res = []
+    const res = []
     const todaySnapshot = getTodaySnapshot();
     if (todaySnapshot) {
       for (const habit of todaySnapshot.habbits) {
@@ -210,10 +210,10 @@ export default function Home() {
     );
   }
 
-  const todayDisplayed = new Date().toLocaleDateString("en-US", {
+  const todayDisplayed = today ? today.toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
-  });
+  }) : "loading...";
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -230,7 +230,7 @@ export default function Home() {
               {/*Google integration panel */}
               <div className="mb-4">
                 <IntegrationPannel
-                  state={googleState}
+                  state={googleState ?? GoogleState.NOT_CONNECTED}
                   spreadSheetUrl={spreadsheetUrl}
                   onSyncNowClick={handleSyncNowButtonClick}
                   onSetGoogleRefreshToken={setGoogleRefreshToken}

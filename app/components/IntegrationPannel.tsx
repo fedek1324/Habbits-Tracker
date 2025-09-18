@@ -1,5 +1,6 @@
 import { useGoogleLogin } from "@react-oauth/google";
-import React from "react";
+import React, { useRef } from "react";
+import { memo } from 'react';
 import axios from "axios";
 import { GoogleState } from "@/types/googleState";
 
@@ -12,18 +13,45 @@ interface IntegrationPannelProps {
   getGoogleData: () => Promise<void>
 }
 
-const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
+const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function IntegrationPannel({
   state,
   spreadSheetUrl,
   onSyncNowClick,
   onSetGoogleRefreshToken,
   onSetGoogleAccessToken,
   getGoogleData,
-}) => {
+}) {
+  const prevState = useRef<Partial<IntegrationPannelProps>>({
+    state: undefined,
+    spreadSheetUrl: undefined,
+    onSyncNowClick: undefined,
+    onSetGoogleRefreshToken: undefined,
+    onSetGoogleAccessToken: undefined,
+    getGoogleData: undefined
+  });
+
+  const currentState: IntegrationPannelProps = {
+    state,
+    spreadSheetUrl,
+    onSyncNowClick,
+    onSetGoogleRefreshToken,
+    onSetGoogleAccessToken,
+    getGoogleData,
+  }
+
+// If you want to iterate over the props, use the actual props object, e.g.:
+  for (const key of Object.keys(currentState) as (keyof IntegrationPannelProps)[]) {
+    const value = ( { state, spreadSheetUrl, onSyncNowClick, onSetGoogleRefreshToken, onSetGoogleAccessToken, getGoogleData } as IntegrationPannelProps )[key];
+    if (value !== prevState.current[key]) {
+      console.log("" + key + " value changed from " + prevState.current[key] + " to " + value);
+    }
+    prevState.current = currentState;
+  }
+
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 
-  console.log("rendering panel with state " + state + " spr url " + spreadSheetUrl);
+  console.log("rendering panel");
   /**
    * login function
    */
@@ -289,6 +317,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default IntegrationPannel;

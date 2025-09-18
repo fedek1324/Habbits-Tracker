@@ -44,3 +44,7 @@ Use react lists
 create type for date
 consider alternatives for fetch: https://react.dev/learn/synchronizing-with-effects#what-are-good-alternatives-to-data-fetching-in-effects
 consider RTK Query (TanStack Query) or SWR
+
+use useExternalStore for local storage data maybe
+or maybe in state set today state variable so that now render will be pure but so i need to reimplement api so that it accepts date as argument
+or maybe in effect get habits from api

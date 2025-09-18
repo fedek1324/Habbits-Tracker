@@ -136,6 +136,27 @@ export const useGoogle = () => {
 
   let ignoreFetch = false;
 
+    const setAccessToken = useCallback((accessToken: string) => {
+    accessTokenRef.current = accessToken;
+  }, []);
+
+  const setRefreshToken = useCallback((refreshToken: string) => {
+    refreshTokenRef.current = refreshToken;
+  }, []);
+
+  const setRefreshTokenPublic = useCallback(
+    (refreshToken: string | null): void => {
+      if (refreshToken) {
+        setState(GoogleState.HAS_REFRESH_TOKEN);
+      } else {
+        setState(GoogleState.NOT_CONNECTED);
+      }
+      localStorage.setItem("googleRefreshToken", refreshToken || "");
+      setRefreshToken(refreshToken || "");
+    },
+    [setRefreshToken]
+  );
+
     /**
    * use fetch with arguments and refrest access token if needed
    */
@@ -176,7 +197,7 @@ export const useGoogle = () => {
 
       return response;
     },
-    []
+    [setAccessToken]
   );
 
     /**
@@ -776,7 +797,7 @@ export const useGoogle = () => {
       }
       return { habits, snapshots };
     },
-    [createGoogleSpreadSheet, getData]
+    [createGoogleSpreadSheet, getData, setAccessToken, setRefreshToken]
   );
 
   const getGoogleData = useCallback(async () => {
@@ -807,27 +828,6 @@ export const useGoogle = () => {
     }
   }, [getGoogleData]);
 
-
-  const setAccessToken = (accessToken: string) => {
-    accessTokenRef.current = accessToken;
-  };
-
-  const setRefreshToken = (refreshToken: string) => {
-    refreshTokenRef.current = refreshToken;
-  };
-
-  const setRefreshTokenPublic = useCallback(
-    (refreshToken: string | null): void => {
-      if (refreshToken) {
-        setState(GoogleState.HAS_REFRESH_TOKEN);
-      } else {
-        setState(GoogleState.NOT_CONNECTED);
-      }
-      localStorage.setItem("googleRefreshToken", refreshToken || "");
-      setRefreshToken(refreshToken || "");
-    },
-    []
-  );
 
   /**
    * Populates spreadSheet it with data from local storage
