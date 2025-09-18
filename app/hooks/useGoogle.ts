@@ -119,7 +119,7 @@ const parseSpreadsheetDataToHabits = (spreadsheetData: {
 
 const SPREADSHEET_NAME = "My habits tracker";
 
-export const useGoogle = () => {
+export const useGoogle = (today: Date | undefined) => {
   const [state, setState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
 
   const accessTokenRef = useRef<string>(undefined);
@@ -749,7 +749,8 @@ export const useGoogle = () => {
    */
   const getDataCheckEmpty = useCallback(
     async (
-      refreshTokenArg: string
+      refreshTokenArg: string,
+      today: Date
     ): Promise<
       | {
           snapshots: IDailySnapshot[];
@@ -758,7 +759,7 @@ export const useGoogle = () => {
       | undefined
     > => {
       const habits = getHabits();
-      const snapshots = getDailySnapshots();
+      const snapshots = getDailySnapshots(today);
       if (refreshTokenArg) {
         // Automatically try to get a fresh access token
         const newAccessToken = await refreshAccessToken(refreshTokenArg);
@@ -800,10 +801,10 @@ export const useGoogle = () => {
     [createGoogleSpreadSheet, getData, setAccessToken, setRefreshToken]
   );
 
-  const getGoogleData = useCallback(async () => {
+  const getGoogleData = useCallback(async (today: Date) => {
     if (refreshTokenRef.current) {
       setState(GoogleState.UPDATING);
-      getDataCheckEmpty(refreshTokenRef.current)
+      getDataCheckEmpty(refreshTokenRef.current, today)
         .then((res) => {
           if (res) {
             if (!ignoreFetch) {
@@ -821,7 +822,11 @@ export const useGoogle = () => {
 
 
   useEffect(() => {    
-    getGoogleData();
+    if (!today) {
+      return;
+    }
+    
+    getGoogleData(today);
 
     return () => {
       ignoreFetch = true;
@@ -832,10 +837,10 @@ export const useGoogle = () => {
   /**
    * Populates spreadSheet it with data from local storage
    */
-  const uploadData = useCallback(async () => {
+  const uploadData = useCallback(async (today: Date) => {
     setState(GoogleState.UPDATING);
     const habits = getHabits();
-    const snapshots = getDailySnapshots();
+    const snapshots = getDailySnapshots(today);
     try {
       console.log("Manual sync: Pushing local data to spreadsheet...");
 

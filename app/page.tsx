@@ -18,6 +18,7 @@ import {
   saveDailySnapshot,
   fillHistory,
   initializeHabitsLocalStorage,
+  getHabits,
 } from "@/app/services/apiLocalStorage";
 
 import { registerSyncFunction, triggerSync } from "@/app/services/syncManager";
@@ -42,7 +43,6 @@ export default function Home() {
   const [snapshots, setHabitSnapshots] = useState<Array<IDailySnapshot>>([]);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   // const [error, setError] = useState<string>("");
-  const [mounted, setMounted] = useState(false);
   const [today, setToday] = useState<Date>();
 
   homeRenderCount++;
@@ -56,38 +56,51 @@ export default function Home() {
     setGoogleRefreshToken,
     setGoolgeAccessToken,
     loadedData,
-  } = useGoogle();
+  } = useGoogle(today);
 
   // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
   
-  useEffect(() => {
+  useEffect(() => {    
     // for hydration bypass
-    setMounted(true);
-    setToday(new Date());
+    // can't set date in render function because render function should be pure
+    const today = new Date();
+    setToday(today);
+
+    fillHistory(today);
+
+    const habits = getHabits();
+    const snapshots = getDailySnapshots(today);
+    setHabits(habits);
+    setHabitSnapshots(snapshots);
   }, []);
 
   (useCallback(
     () => {
-      registerSyncFunction(async () => await uploadDataToGoogle())
+      if (today) {
+        registerSyncFunction(async () => await uploadDataToGoogle(today))
+      }
     },
-    [uploadDataToGoogle]
+    [uploadDataToGoogle, today]
   ))();
 
   // registerSyncFunction(async () => await uploadDataToGoogle())
 
   useEffect(() => {
-    if (loadedData) {
+    if (loadedData && today) {
       const { habits, snapshots } = loadedData;
       setHabits(habits);
       setHabitSnapshots(snapshots);
       initializeHabitsLocalStorage(habits, snapshots);
-      fillHistory();
+      fillHistory(today);
     }
-  }, [loadedData]);
+  }, [loadedData, today]);
 
   const handleSyncNowButtonClick = useCallback(() => {
-    getGoogleData();
-  }, [getGoogleData]);
+    if (!today) {
+      return;
+    }
+    getGoogleData(today);
+  }, [getGoogleData, today]);
 
   const updateGoogle = async (operation?: string) => {
     console.log("updateGoogle called with operation " + operation);
@@ -99,10 +112,13 @@ export default function Home() {
   };
 
   const handleAdd = async (newHabbit: IHabbit, needCount: number) => {
+    if (!today) {
+      return;
+    }
     addHabit(newHabbit);
 
     // Add to today's snapshot to local storage if needed
-    const todaySnapshot = getTodaySnapshot();
+    const todaySnapshot = getTodaySnapshot(today);
 
     todaySnapshot.habbits.push({
       habbitId: newHabbit.id,
@@ -111,7 +127,7 @@ export default function Home() {
     });
     saveDailySnapshot(todaySnapshot);
 
-    const newSnapshotsArr = getDailySnapshots();
+    const newSnapshotsArr = getDailySnapshots(today);
 
     // Update local state
     setHabits([...habits, newHabbit]);
@@ -121,8 +137,11 @@ export default function Home() {
   };
 
   const handleIncrement = async (id: string) => {
+    if (!today) {
+      return;
+    }
     // Add to today's snapshot to local storage if needed
-    const todaySnapshot = getTodaySnapshot();
+    const todaySnapshot = getTodaySnapshot(today);
 
     const habitData = todaySnapshot.habbits.find((h) => h.habbitId === id);
     if (!habitData) return;
@@ -133,9 +152,9 @@ export default function Home() {
     );
 
     // Update in snapshot
-    updateHabitCount(id, newActualCount);
+    updateHabitCount(id, newActualCount, today);
 
-    const newSnapshotsArr = getDailySnapshots();
+    const newSnapshotsArr = getDailySnapshots(today);
 
     // Update local state
     setHabitSnapshots(newSnapshotsArr);
@@ -144,10 +163,13 @@ export default function Home() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!today) {
+      return;
+    }
     // Update local storage
-    deleteHabbit(id);
+    deleteHabbit(id, today);
 
-    const newSnapshotsArr = getDailySnapshots();
+    const newSnapshotsArr = getDailySnapshots(today);
 
     // Update local state
     // dont remove from habits because this habit can be used in history
@@ -161,13 +183,16 @@ export default function Home() {
     newNeedCount?: number,
     newActualCount?: number
   ) => {
+    if (!today) {
+      return;
+    }
     // Update local storage
-    updateHabitCount(habitChanged.id, newActualCount || 0);
-    updateHabitNeedCount(habitChanged.id, newNeedCount || 1);
+    updateHabitCount(habitChanged.id, newActualCount || 0, today);
+    updateHabitNeedCount(habitChanged.id, newNeedCount || 1, today);
     // Update habit text if needed
     updateHabit(habitChanged);
 
-    const newSnapshotsArr = getDailySnapshots();
+    const newSnapshotsArr = getDailySnapshots(today);
 
     // Update local state
     setHabitSnapshots(newSnapshotsArr);
@@ -180,9 +205,20 @@ export default function Home() {
     await updateGoogle("handleEdit");
   };
 
+  const onGooleLogin = async () => {
+    if (!today) {
+      return;
+    }
+    await getGoogleData(today);
+  }
+
   const displayHabits: DispalyHabbit[] = useMemo(() => {
-    const res = []
-    const todaySnapshot = getTodaySnapshot();
+    if (!today) {
+      return [];
+    }
+    const res = [];
+    const todayDay = today.toISOString().split("T")[0];
+    const todaySnapshot = snapshots.find((snapshot => snapshot.date === todayDay));
     if (todaySnapshot) {
       for (const habit of todaySnapshot.habbits) {
         res.push({
@@ -195,20 +231,6 @@ export default function Home() {
     }
     return res;
   }, [today, habits, snapshots]);
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
-          <main className="p-4 pb-20">
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
-              Loading...
-            </h1>
-          </main>
-        </div>
-      </div>
-    );
-  }
 
   const todayDisplayed = today ? today.toLocaleDateString("en-US", {
     day: "numeric",
@@ -235,7 +257,7 @@ export default function Home() {
                   onSyncNowClick={handleSyncNowButtonClick}
                   onSetGoogleRefreshToken={setGoogleRefreshToken}
                   onSetGoogleAccessToken={setGoolgeAccessToken}
-                  getGoogleData={getGoogleData}
+                  onLogin={onGooleLogin}
                 />
               </div>
 

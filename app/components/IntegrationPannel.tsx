@@ -4,13 +4,14 @@ import { memo } from 'react';
 import axios from "axios";
 import { GoogleState } from "@/types/googleState";
 
+// TODO automate types
 interface IntegrationPannelProps {
   state: GoogleState;
   spreadSheetUrl: string | undefined;
   onSyncNowClick: () => void;
   onSetGoogleRefreshToken: (token: string) => void;
   onSetGoogleAccessToken: (token: string) => void;
-  getGoogleData: () => Promise<void>
+  onLogin: () => Promise<void>;
 }
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function IntegrationPannel({
@@ -19,7 +20,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
   onSyncNowClick,
   onSetGoogleRefreshToken,
   onSetGoogleAccessToken,
-  getGoogleData,
+  onLogin
 }) {
   const prevState = useRef<Partial<IntegrationPannelProps>>({
     state: undefined,
@@ -27,7 +28,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
     onSyncNowClick: undefined,
     onSetGoogleRefreshToken: undefined,
     onSetGoogleAccessToken: undefined,
-    getGoogleData: undefined
   });
 
   const currentState: IntegrationPannelProps = {
@@ -36,12 +36,12 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
     onSyncNowClick,
     onSetGoogleRefreshToken,
     onSetGoogleAccessToken,
-    getGoogleData,
+    onLogin
   }
 
 // If you want to iterate over the props, use the actual props object, e.g.:
   for (const key of Object.keys(currentState) as (keyof IntegrationPannelProps)[]) {
-    const value = ( { state, spreadSheetUrl, onSyncNowClick, onSetGoogleRefreshToken, onSetGoogleAccessToken, getGoogleData } as IntegrationPannelProps )[key];
+    const value = ( { state, spreadSheetUrl, onSyncNowClick, onSetGoogleRefreshToken, onSetGoogleAccessToken, onLogin } as IntegrationPannelProps )[key];
     if (value !== prevState.current[key]) {
       console.log("" + key + " value changed from " + prevState.current[key] + " to " + value);
     }
@@ -78,7 +78,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
         onSetGoogleRefreshToken(refresh_token);
         onSetGoogleAccessToken(access_token);
 
-        await getGoogleData();
+        await onLogin();
       } else {
         console.log("❌ No access token received");
       }
