@@ -62,12 +62,14 @@ export default function Home() {
   
   useEffect(() => {    
     // for hydration bypass
-    // can't set date in render function because render function should be pure
+    // leave render function pure
     const today = new Date();
     setToday(today);
 
+    // fill history in local storage
     fillHistory(today);
 
+    // get habits data from local storage
     const habits = getHabits();
     const snapshots = getDailySnapshots(today);
     setHabits(habits);
@@ -88,6 +90,7 @@ export default function Home() {
   useEffect(() => {
     if (loadedData && today) {
       const { habits, snapshots } = loadedData;
+      // TODO maybe fillHistory and then getHabits and getSnapshots
       setHabits(habits);
       setHabitSnapshots(snapshots);
       initializeHabitsLocalStorage(habits, snapshots);
@@ -286,7 +289,7 @@ export default function Home() {
               <AddHabbit onAdd={handleAdd} />
             </>
           ) : (
-            <HistoryView />
+            <HistoryView habits={habits} snapshots={snapshots} />
           )}
         </main>
 

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import IHabbit from "@/types/habbit";
-import { getDailySnapshots, getHabit, getHabits } from "@/app/services/apiLocalStorage";
 import { IoCheckmarkCircle } from "react-icons/io5";
+import IDailySnapshot from "@/types/dailySnapshot";
 
-interface HistoryViewProps {}
+interface HistoryViewProps {
+  habits: IHabbit[],
+  snapshots: IDailySnapshot[]
+}
 
 // type Period = "daily" | "weekly" | "monthly";
 
@@ -15,42 +17,26 @@ type DailyHistory = {
     habbitId: string;
     habbitText: string;
     habbitNeedCount: number;
-    habbitHasCount: number;
+    habbitDidCount: number;
   }[];
 };
 
-const HistoryView: React.FC<HistoryViewProps> = () => {
+const HistoryView: React.FC<HistoryViewProps> = ({habits, snapshots}) => {
   // const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
-  const [history, setHistory] = useState<DailyHistory[]>([]);
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      const history = await getLast30DaysHistory();
-      setHistory(history);
-    };
-    loadHistory();
-  }, []);
-
-  // Get the last 30 days for example
-  const getLast30DaysHistory = async (): Promise<Array<DailyHistory>> => {
-    const daysHistory = [];
-    const today = new Date();
-
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateString = date.toISOString().slice(0, 10);
-
-      const habitsForDay = await getHabitsForDate(dateString);
-
-      daysHistory.push({
-        date: dateString,
-        habits: habitsForDay,
-      });
-    }
-
-    return daysHistory;
-  };
+  // Transform snapshots to history format
+  const history: DailyHistory[] = snapshots ? snapshots.map(snapshot => ({
+    date: snapshot.date,
+    habits: snapshot.habbits.map(habbitSnapshot => {
+      const habit = habits.find(h => h.id === habbitSnapshot.habbitId);
+      return {
+        habbitId: habbitSnapshot.habbitId,
+        habbitText: habit?.text || 'Unknown Habit',
+        habbitNeedCount: habbitSnapshot.habbitNeedCount,
+        habbitDidCount: habbitSnapshot.habbitDidCount
+      };
+    })
+  })) : [];
 
   // Function to get history data for a specific day from snapshots
   // Function to format display date based on day index
@@ -67,45 +53,12 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
 
   // Function to calculate completed habits count for a day
   const getCompletedCount = (habits: DailyHistory["habits"]): number => {
-    return habits.filter((h) => h.habbitHasCount >= h.habbitNeedCount).length;
+    return habits.filter((h) => h.habbitDidCount >= h.habbitNeedCount).length;
   };
 
   // Function to get total habits count for a day
   const getTotalCount = (habits: DailyHistory["habits"]): number => {
     return habits.length;
-  };
-
-  const getHabitsForDate = async (
-    date: string
-  ): Promise<
-    Array<{
-      habbitId: string;
-      habbitText: string;
-      habbitNeedCount: number;
-      habbitHasCount: number;
-    }>
-  > => {
-    const snapshots = await getDailySnapshots();
-
-    const snapshot = snapshots.find((s) => s.date === date);
-    if (!snapshot) {
-      // If no snapshot exists for this day, return empty array
-      return [];
-    }
-
-    // Combine information from snapshot with current habits
-    return await Promise.all(
-      snapshot.habbits.map(async (habit) => {
-        const habbit = await getHabit(habit.habbitId);
-        const habbitText = habbit?.text;
-        return {
-          habbitId: habbit?.id || "No id",
-          habbitText: habbitText || "No name",
-          habbitHasCount: habit.habbitDidCount || 0,
-          habbitNeedCount: habit.habbitNeedCount || 1,
-        };
-      })
-    );
   };
 
   return (
@@ -159,7 +112,7 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
                     className={`
                       flex justify-between items-center p-3 rounded-lg
                       ${
-                        habit.habbitHasCount === habit.habbitNeedCount
+                        habit.habbitDidCount >= habit.habbitNeedCount
                           ? "bg-green-50"
                           : "bg-gray-50"
                       }
@@ -170,9 +123,9 @@ const HistoryView: React.FC<HistoryViewProps> = () => {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500">
-                        {habit.habbitHasCount}/{habit.habbitNeedCount}
+                        {habit.habbitDidCount}/{habit.habbitNeedCount}
                       </span>
-                      {habit.habbitHasCount === habit.habbitNeedCount && (
+                      {habit.habbitDidCount >= habit.habbitNeedCount && (
                         <IoCheckmarkCircle className="w-5 h-5 text-green-600" />
                       )}
                     </div>
