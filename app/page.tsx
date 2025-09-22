@@ -390,12 +390,10 @@ export default function Home() {
           }
         }
 
-        if (habitData.length > 0) {
-          snapshots.push({
-            date: date,
-            habbits: habitData,
-          });
-        }
+        snapshots.push({
+          date: date,
+          habbits: habitData,
+        });
       });
 
       console.log(
