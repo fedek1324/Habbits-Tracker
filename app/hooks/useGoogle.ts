@@ -119,15 +119,10 @@ const parseSpreadsheetDataToHabits = (spreadsheetData: {
 
 const SPREADSHEET_NAME = "My habits tracker";
 
-export const useGoogle = (today: Date | undefined) => {
+export const useGoogle = (today: Date | undefined, refreshToken: string) => {
   const [state, setState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
 
   const accessTokenRef = useRef<string>(undefined);
-  const refreshTokenRef = useRef<string>(
-    typeof window !== "undefined"
-      ? localStorage.getItem("googleRefreshToken") || ""
-      : ""
-  );
 
   const [spreadsheetId, setSpreadsheetId] = useState<string>();
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string>();
@@ -136,26 +131,9 @@ export const useGoogle = (today: Date | undefined) => {
 
   let ignoreFetch = false;
 
-    const setAccessToken = useCallback((accessToken: string) => {
+  const setAccessToken = useCallback((accessToken: string) => {
     accessTokenRef.current = accessToken;
   }, []);
-
-  const setRefreshToken = useCallback((refreshToken: string) => {
-    refreshTokenRef.current = refreshToken;
-  }, []);
-
-  const setRefreshTokenPublic = useCallback(
-    (refreshToken: string | null): void => {
-      if (refreshToken) {
-        setState(GoogleState.HAS_REFRESH_TOKEN);
-      } else {
-        setState(GoogleState.NOT_CONNECTED);
-      }
-      localStorage.setItem("googleRefreshToken", refreshToken || "");
-      setRefreshToken(refreshToken || "");
-    },
-    [setRefreshToken]
-  );
 
     /**
    * use fetch with arguments and refrest access token if needed
@@ -789,22 +767,20 @@ export const useGoogle = (today: Date | undefined) => {
           }
         } else {
           console.log(
-            "❌ Failed to refresh access token, removing stored refresh token"
+            "❌ Failed to refresh access token"
           );
-          localStorage.removeItem("googleRefreshToken");
-          setRefreshToken("");
           return undefined;
         }
       }
       return { habits, snapshots };
     },
-    [createGoogleSpreadSheet, getData, setAccessToken, setRefreshToken]
+    [createGoogleSpreadSheet, getData, setAccessToken]
   );
 
   const getGoogleData = useCallback(async (today: Date) => {
-    if (refreshTokenRef.current) {
+    if (refreshToken) {
       setState(GoogleState.UPDATING);
-      getDataCheckEmpty(refreshTokenRef.current, today)
+      getDataCheckEmpty(refreshToken, today)
         .then((res) => {
           if (res) {
             if (!ignoreFetch) {
@@ -817,14 +793,20 @@ export const useGoogle = (today: Date | undefined) => {
           console.log(error);
           setState(GoogleState.ERROR);
         });
+    } else {
+      console.log("No refrest token in getGoogleData")
     }
-  }, [getDataCheckEmpty, ignoreFetch]);
+  }, [getDataCheckEmpty, ignoreFetch, refreshToken]);
 
 
   useEffect(() => {    
+    console.log("getGoogleData effect 1")
     if (!today) {
+      console.log("no today in useGoogle effect")
       return;
     }
+
+    console.log("getGoogleData effect 2")
     
     getGoogleData(today);
 
@@ -847,7 +829,7 @@ export const useGoogle = (today: Date | undefined) => {
       if (spreadsheetId) {
         // Push local data to spreadsheet (don't read from spreadsheet)
         await populateSpreadsheetWithHabits(
-          refreshTokenRef.current ?? "",
+          refreshToken ?? "",
           accessTokenRef.current ?? "",
           spreadsheetId,
           habits,
@@ -866,16 +848,16 @@ export const useGoogle = (today: Date | undefined) => {
       console.error("❌ Error during manual sync:", error);
       setState(GoogleState.ERROR);
     }
-  }, [populateSpreadsheetWithHabits, spreadsheetId]);
+  }, [populateSpreadsheetWithHabits, spreadsheetId, refreshToken]);
 
   return {
     googleState: state,
     getGoogleData,
     uploadDataToGoogle: uploadData,
-    setGoogleRefreshToken: setRefreshTokenPublic,
     setGoolgeAccessToken: setAccessToken,
     spreadsheetUrl,
     spreadsheetId,
     loadedData,
+    refreshToken,
   };
 };

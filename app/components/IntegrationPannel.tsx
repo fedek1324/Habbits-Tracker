@@ -11,7 +11,6 @@ interface IntegrationPannelProps {
   onSyncNowClick: () => void;
   onSetGoogleRefreshToken: (token: string) => void;
   onSetGoogleAccessToken: (token: string) => void;
-  onLogin: () => Promise<void>;
 }
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function IntegrationPannel({
@@ -19,8 +18,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
   spreadSheetUrl,
   onSyncNowClick,
   onSetGoogleRefreshToken,
-  onSetGoogleAccessToken,
-  onLogin
+  onSetGoogleAccessToken
 }) {
   const prevState = useRef<Partial<IntegrationPannelProps>>({
     state: undefined,
@@ -36,12 +34,11 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
     onSyncNowClick,
     onSetGoogleRefreshToken,
     onSetGoogleAccessToken,
-    onLogin
   }
 
 // If you want to iterate over the props, use the actual props object, e.g.:
   for (const key of Object.keys(currentState) as (keyof IntegrationPannelProps)[]) {
-    const value = ( { state, spreadSheetUrl, onSyncNowClick, onSetGoogleRefreshToken, onSetGoogleAccessToken, onLogin } as IntegrationPannelProps )[key];
+    const value = ( { state, spreadSheetUrl, onSyncNowClick, onSetGoogleRefreshToken, onSetGoogleAccessToken } as IntegrationPannelProps )[key];
     if (value !== prevState.current[key]) {
       console.log("" + key + " value changed from " + prevState.current[key] + " to " + value);
     }
@@ -51,7 +48,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
   const SCOPES =
     "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 
-  console.log("rendering panel");
+  // console.log("rendering panel");
   /**
    * login function
    */
@@ -77,8 +74,6 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
 
         onSetGoogleRefreshToken(refresh_token);
         onSetGoogleAccessToken(access_token);
-
-        await onLogin();
       } else {
         console.log("❌ No access token received");
       }

@@ -16,12 +16,12 @@ import {
   updateHabitNeedCount,
   getTodaySnapshot,
   saveDailySnapshot,
-  fillHistory,
+  fillHistory as fillHistoryLocalStorage,
   initializeHabitsLocalStorage,
   getHabits,
 } from "@/app/services/apiLocalStorage";
 
-import { registerSyncFunction, triggerSync } from "@/app/services/syncManager";
+import { registerSyncFunction, triggerSync, unregisterSyncFunction } from "@/app/services/syncManager";
 
 import IHabbit from "@/types/habbit";
 import IDailySnapshot from "@/types/dailySnapshot";
@@ -43,7 +43,19 @@ export default function Home() {
   const [snapshots, setHabitSnapshots] = useState<Array<IDailySnapshot>>([]);
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   // const [error, setError] = useState<string>("");
-  const [today, setToday] = useState<Date>();
+  const [today] = useState<Date>(new Date());
+
+  const [refreshToken, setRefreshTokenPrivate] = useState<string>(
+    typeof window !== "undefined"
+      ? localStorage.getItem("googleRefreshToken") || ""
+      : ""
+  );
+
+  const setRefreshToken = (refreshToken: string) => {
+    localStorage.setItem("googleRefreshToken", refreshToken || "");
+    setRefreshTokenPrivate(refreshToken || "");
+  }
+
 
   homeRenderCount++;
   console.log("Home render. Total: " + homeRenderCount);
@@ -53,46 +65,49 @@ export default function Home() {
     getGoogleData,
     uploadDataToGoogle,
     spreadsheetUrl,
-    setGoogleRefreshToken,
     setGoolgeAccessToken,
     loadedData,
-  } = useGoogle(today);
+  } = useGoogle(today, refreshToken);
 
   // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
 
   useEffect(() => {
-    // for hydration bypass
-    // leave render function pure
-    const today = new Date();
-    setToday(today);
+    console.log("Home habits sync effect called");
+    // synchronize habits data with local storage or google
+    if (today) {
+      if (loadedData) {
+        const { habits: habitsGoogle, snapshots: snapshotsGoogle } = loadedData;
+        initializeHabitsLocalStorage(habitsGoogle, snapshotsGoogle);
+        // fill empty days in local storage
+        fillHistoryLocalStorage(today);
 
-    // fill history in local storage
-    fillHistory(today);
+        // get proper habits data from local storage
+        const habits = getHabits();
+        const snapshots = getDailySnapshots(today);
+        setHabits(habits);
+        setHabitSnapshots(snapshots);
+      } else {
+        // get from local storage
 
-    // get habits data from local storage
-    const habits = getHabits();
-    const snapshots = getDailySnapshots(today);
-    setHabits(habits);
-    setHabitSnapshots(snapshots);
-  }, []);
+        // fill history in local storage
+        fillHistoryLocalStorage(today);
+
+        // get habits data from local storage
+        const habits = getHabits();
+        const snapshots = getDailySnapshots(today);
+        setHabits(habits);
+        setHabitSnapshots(snapshots);
+      }
+    }
+  }, [today, loadedData]);
 
   useEffect(() => {
     if (loadedData && today) {
-      const { habits, snapshots } = loadedData;
-      // TODO maybe fillHistory and then getHabits and getSnapshots
-      setHabits(habits);
-      setHabitSnapshots(snapshots);
-      initializeHabitsLocalStorage(habits, snapshots);
-      fillHistory(today);
-    }
-  }, [loadedData, today]);
-
-  useCallback(() => {
-    if (today) {
       registerSyncFunction(async () => await uploadDataToGoogle(today));
+    } else {
+      unregisterSyncFunction();
     }
-  }, [uploadDataToGoogle, today])();
-
+  }, [loadedData, today, uploadDataToGoogle]);
   // registerSyncFunction(async () => await uploadDataToGoogle())
 
   const handleSyncNowButtonClick = useCallback(() => {
@@ -205,13 +220,6 @@ export default function Home() {
     await updateGoogle("handleEdit");
   };
 
-  const onGooleLogin = async () => {
-    if (!today) {
-      return;
-    }
-    await getGoogleData(today);
-  };
-
   const displayHabits: DispalyHabbit[] = useMemo(() => {
     if (!today) {
       return [];
@@ -259,9 +267,8 @@ export default function Home() {
                   state={googleState ?? GoogleState.NOT_CONNECTED}
                   spreadSheetUrl={spreadsheetUrl}
                   onSyncNowClick={handleSyncNowButtonClick}
-                  onSetGoogleRefreshToken={setGoogleRefreshToken}
+                  onSetGoogleRefreshToken={setRefreshToken}
                   onSetGoogleAccessToken={setGoolgeAccessToken}
-                  onLogin={onGooleLogin}
                 />
               </div>
 
