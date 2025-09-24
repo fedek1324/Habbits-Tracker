@@ -21,7 +21,11 @@ import {
   getHabits,
 } from "@/app/services/apiLocalStorage";
 
-import { registerSyncFunction, triggerSync, unregisterSyncFunction } from "@/app/services/syncManager";
+import {
+  registerSyncFunction,
+  triggerSync,
+  unregisterSyncFunction,
+} from "@/app/services/syncManager";
 
 import IHabbit from "@/types/habbit";
 import IDailySnapshot from "@/types/dailySnapshot";
@@ -54,11 +58,10 @@ export default function Home() {
   const setRefreshToken = (refreshToken: string) => {
     localStorage.setItem("googleRefreshToken", refreshToken || "");
     setRefreshTokenPrivate(refreshToken || "");
-  }
-
+  };
 
   homeRenderCount++;
-  console.log("Home render. Total: " + homeRenderCount);
+  console.log("Home: render. Total: " + homeRenderCount);
 
   const {
     googleState,
@@ -72,10 +75,10 @@ export default function Home() {
   // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
 
   useEffect(() => {
-    console.log("Home habits sync effect called");
     // synchronize habits data with local storage or google
     if (today) {
       if (loadedData) {
+        console.log("Home: effect called Getting data from loaded data");
         const { habits: habitsGoogle, snapshots: snapshotsGoogle } = loadedData;
         initializeHabitsLocalStorage(habitsGoogle, snapshotsGoogle);
         // fill empty days in local storage
@@ -87,6 +90,7 @@ export default function Home() {
         setHabits(habits);
         setHabitSnapshots(snapshots);
       } else {
+        console.log("Home: effect called Getting data from local storage");
         // get from local storage
 
         // fill history in local storage
@@ -98,17 +102,16 @@ export default function Home() {
         setHabits(habits);
         setHabitSnapshots(snapshots);
       }
+    } else {
+      console.log("Home: effect called No today in Home effect");
     }
   }, [today, loadedData]);
 
-  useEffect(() => {
-    if (loadedData && today) {
-      registerSyncFunction(async () => await uploadDataToGoogle(today));
-    } else {
-      unregisterSyncFunction();
-    }
-  }, [loadedData, today, uploadDataToGoogle]);
-  // registerSyncFunction(async () => await uploadDataToGoogle())
+  if (loadedData && today) {
+    registerSyncFunction(async () => await uploadDataToGoogle(today));
+  } else {
+    unregisterSyncFunction();
+  }
 
   const handleSyncNowButtonClick = useCallback(() => {
     if (!today) {

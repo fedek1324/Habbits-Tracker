@@ -119,10 +119,14 @@ const parseSpreadsheetDataToHabits = (spreadsheetData: {
 
 const SPREADSHEET_NAME = "My habits tracker";
 
+let renderCount = 0;
+
 export const useGoogle = (today: Date | undefined, refreshToken: string) => {
   const [state, setState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
 
   const accessTokenRef = useRef<string>(undefined);
+
+  console.log('useGoogle: "render" called ' + ++renderCount + ' times');
 
   const [spreadsheetId, setSpreadsheetId] = useState<string>();
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string>();
@@ -736,6 +740,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
         }
       | undefined
     > => {
+      console.log('useGoogle: Getting habits...');
       const habits = getHabits();
       const snapshots = getDailySnapshots(today);
       if (refreshTokenArg) {
@@ -743,7 +748,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
         const newAccessToken = await refreshAccessToken(refreshTokenArg);
         if (newAccessToken) {
           console.log(
-            "✅ Successfully refreshed access token from stored refresh token"
+            "useGoogle: ✅ Successfully refreshed access token from stored refresh token"
           );
 
           setAccessToken(newAccessToken);
@@ -767,7 +772,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
           }
         } else {
           console.log(
-            "❌ Failed to refresh access token"
+            "useGoogle: ❌ Failed to refresh access token"
           );
           return undefined;
         }
@@ -800,13 +805,11 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
 
 
   useEffect(() => {    
-    console.log("getGoogleData effect 1")
+    console.log("useGoogle: getGoogleData effect called")
     if (!today) {
-      console.log("no today in useGoogle effect")
+      console.log("useGoogle: no today in useGoogle effect")
       return;
     }
-
-    console.log("getGoogleData effect 2")
     
     getGoogleData(today);
 
