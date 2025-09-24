@@ -4,5 +4,9 @@ export default interface IDailySnapshot {
         habbitId: string,
         habbitNeedCount: number,
         habbitDidCount: number
+    }>,
+    notes: Array<{
+        noteId: string,
+        noteText: string
     }>
 } 

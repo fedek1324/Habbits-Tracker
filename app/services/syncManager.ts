@@ -1,7 +1,7 @@
 import {
   addHabit as apiAddHabit,
   updateHabit as apiUpdateHabit,
-  deleteHabbit as apiDeleteHabbit,
+  deleteHabbitFromSnapshot as apiDeleteHabbit,
   updateHabitCount as apiUpdateHabitCount,
   updateHabitNeedCount as apiUpdateHabitNeedCount,
   getHabits as apiGetHabits,
