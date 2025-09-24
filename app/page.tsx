@@ -27,10 +27,10 @@ import {
   unregisterSyncFunction,
 } from "@/app/services/syncManager";
 
-import IHabbit from "@/types/habbit";
-import IDailySnapshot from "@/types/dailySnapshot";
+import IHabbit from "@/app/types/habbit";
+import IDailySnapshot from "@/app/types/dailySnapshot";
 import { getDailySnapshots } from "@/app/services/apiLocalStorage";
-import { GoogleState } from "@/types/googleState";
+import { GoogleState } from "@/app/types/googleState";
 import { useGoogle } from "@/app/hooks/useGoogle";
 
 type DispalyHabbit = {

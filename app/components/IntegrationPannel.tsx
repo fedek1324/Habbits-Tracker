@@ -2,7 +2,7 @@ import { useGoogleLogin } from "@react-oauth/google";
 import React, { useRef } from "react";
 import { memo } from 'react';
 import axios from "axios";
-import { GoogleState } from "@/types/googleState";
+import { GoogleState } from "@/app/types/googleState";
 
 // TODO automate types
 interface IntegrationPannelProps {

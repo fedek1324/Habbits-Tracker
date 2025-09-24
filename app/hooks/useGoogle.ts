@@ -1,10 +1,10 @@
 "use client";
 
 import { getDailySnapshots, getHabits } from "@/app/services/apiLocalStorage";
-import IDailySnapshot from "@/types/dailySnapshot";
-import { GoogleState } from "@/types/googleState";
-import IHabbit from "@/types/habbit";
-import IHabbitsData from "@/types/habitsData";
+import IDailySnapshot from "@/app/types/dailySnapshot";
+import { GoogleState } from "@/app/types/googleState";
+import IHabbit from "@/app/types/habbit";
+import IHabbitsData from "@/app/types/habitsData";
 import axios from "axios";
 import { useCallback, useEffect, useState, useRef } from "react";
 

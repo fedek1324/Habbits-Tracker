@@ -1,8 +1,8 @@
 "use client";
 
-import IHabbit from "@/types/habbit";
+import IHabbit from "@/app/types/habbit";
 import { IoCheckmarkCircle } from "react-icons/io5";
-import IDailySnapshot from "@/types/dailySnapshot";
+import IDailySnapshot from "@/app/types/dailySnapshot";
 
 interface HistoryViewProps {
   habits: IHabbit[],
@@ -86,6 +86,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({habits, snapshots}) => {
           </button>
         ))}
       </div> */}
+      
       {/* History List */}
       <div className="space-y-6">
         {history.map((day) => (
