@@ -136,7 +136,7 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
             {habbit.text}
           </span>
           {subtitle && (
-            <span className="block text-sm text-gray-500">{subtitle}</span>
+            <span className="block text-sm text-gray-600">{subtitle}</span>
           )}
         </div>
       </div>

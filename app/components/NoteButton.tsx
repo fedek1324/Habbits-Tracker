@@ -31,7 +31,9 @@ const NoteButton: React.FC<NoteButtonProps> = ({
   onDelete,
   onEdit,
 }) => {
-  const subtitle = `${text.trim() === '' ? "No text" : text.trim()}`;
+  const trimedText = text.trim();
+  const isTextEmpty = trimedText === '';
+  const subtitle = `${ isTextEmpty ? "No text" : trimedText}`;
 
   const [isEditModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [newNoteName, setNewNoteName] = useState<string>(note.name);
@@ -100,7 +102,7 @@ const NoteButton: React.FC<NoteButtonProps> = ({
             {note.name}
           </span>
           {subtitle && (
-            <span className="block text-sm text-gray-500">{subtitle}</span>
+            <span className={`block text-sm ${isTextEmpty ? "text-gray-400" : "text-gray-600"}`}>{subtitle}</span>
           )}
         </div>
       </div>
