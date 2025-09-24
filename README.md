@@ -1,40 +1,58 @@
-https://habbits-tracker-six.vercel.app/
+# Habits tracker
 
+## 📝 Description
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This app is a modern, responsive habit tracking web application built with Next.js that helps users build and maintain daily habits with seamless Google Sheets synchronization.
 
-## Getting Started
+🚀 Live Demo: https://habbits-tracker-six.vercel.app/
 
-First, run the development server:
+## 🔗 How to connect google
+1) Click Connect button on Google Sheets panel
+2) Follow steps from video https://www.youtube.com/watch?v=cBDMrfv-Z2M
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Create & Track Habits - Set daily goals and track progress with one-click counters
+- 30-Day History - View your habit completion trends over the past month
+- Real-time Cross-Device Sync - Update habits on PC and instantly see changes on mobile (and vice versa)
+- Google Sheets table - You can edit your data and plan habits in Google Sheets table
+- Responsive Design - Optimized for mobile, tablet, and desktop
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Frontend: Next.js 14, TypeScript, Tailwind CSS
+- Backend: Next.js API Routes, Google OAuth 2.0
+- Storage: Local Storage + Google Sheets API
+- Deployment: Vercel
 
-## Learn More
+## 🎯 Key Problems Solved
 
-To learn more about Next.js, take a look at the following resources:
+- You can use local storage or sync with google. It's your choice
+- Token Management - The refresh token is saved. The access token is updated if necessary using Next.js route
+- Data Gaps - Automatic backfilling for missed tracking days
+- Google sheet safe edit - You can edit google sheet data safely: remove columns, change habits data
+- Performance - Debounced syncing (500ms) to minimize API calls
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🚀 Getting Started
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1) Clone & Install
+  ```
+  clone https://github.com/yourusername/habits-tracker.git
+  cd habits-tracker
+  npm install
+  ```
 
-## Deploy on Vercel
+2) Environment Setup\
+  Create .env.local:\
+  GOOGLE_CLIENT_ID=your_google_client_id\
+  GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3) Setup Google services:\
+  a) Create app in Google console: https://console.cloud.google.com/ \
+  b) Enable Spreadsheet and Drive APIs \
+  c) Create OAuth 2.0 Client \
+  d) Setup Authorized JavaScript origins and Redirect urls
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-"# Habbits-Tracker" 
+4) Run `npm run dev` \
+  Visit http://localhost:3000
+
