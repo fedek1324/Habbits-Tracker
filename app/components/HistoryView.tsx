@@ -36,7 +36,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({habits, snapshots}) => {
         habbitDidCount: habbitSnapshot.habbitDidCount
       };
     })
-  })) : [];
+  })).reverse() : [];
 
   // Function to get history data for a specific day from snapshots
   // Function to format display date based on day index
