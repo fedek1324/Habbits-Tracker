@@ -10,6 +10,7 @@ adjust animations
 use functions like updateHabitNeedCount instead of modifying todaySnapshots
 populateSpreadsheetWithHabits calls to many times
 on clearing spreadsheet don't call extra get spreadsheet. Do delete immediately
+use fetch instead of axios bcs i mostly use fetch
 
 highlight "Hello" on welcome screen
 
@@ -32,9 +33,18 @@ when I change data in spreadsheet in runtime and then I change
 something in habits some old data from local state pushes to google
 seen when i delete column in google but there was habit in local storage
 
+set current date in useEffect and then filter habits for today habits render
+
 Use Redux
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
-add tests
+add tests (unit and e2e)
+test parse from google spreadsheet to habits and snapshots function
 Use css modules / styled components
 Use react lists
 create type for date
+consider alternatives for fetch: https://react.dev/learn/synchronizing-with-effects#what-are-good-alternatives-to-data-fetching-in-effects
+consider RTK Query (TanStack Query) or SWR
+
+use useExternalStore for local storage data maybe
+or maybe in state set today state variable so that now render will be pure but so i need to reimplement api so that it accepts date as argument
+or maybe in effect get habits from api

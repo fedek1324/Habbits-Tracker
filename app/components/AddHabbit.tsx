@@ -1,11 +1,11 @@
 "use client";
 
-import { addHabit } from "@/services/apiLocalStorage";
+import { addHabit } from "@/app/services/apiLocalStorage";
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
 import { FormEventHandler, useState } from "react";
 import Modal from "./Modal";
-import IHabbit from "@/types/habbit";
+import IHabbit from "@/app/types/habbit";
 
 const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit, needCount: number) => void }> = ({
   onAdd,

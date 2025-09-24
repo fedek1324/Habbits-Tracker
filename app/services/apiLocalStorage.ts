@@ -54,8 +54,8 @@ export const getHabits = (): IHabbit[] => {
 export const getHabit = (id: string): IHabbit | undefined => {
   try {
     const habitsJson = localStorage.getItem(HABITS_STORAGE_KEY);
-    let habbits: IHabbit[] = habitsJson ? JSON.parse(habitsJson) : [];
-    let searchHabbit = habbits.find((h) => h.id === id);
+    const habbits: IHabbit[] = habitsJson ? JSON.parse(habitsJson) : [];
+    const searchHabbit = habbits.find((h) => h.id === id);
     return searchHabbit;
   } catch (error) {
     console.error("Error getting habits from localStorage:", error);
@@ -74,8 +74,8 @@ export const updateHabit = (updatedHabit: IHabbit): void => {
 /**
  * delete Habbit in todays' snapshot
  */
-export const deleteHabbit = (id: string): void => {
-  const todaySnapshot = getTodaySnapshot();
+export const deleteHabbit = (id: string, today: Date): void => {
+  const todaySnapshot = getTodaySnapshot(today);
   todaySnapshot.habbits = todaySnapshot.habbits.filter((h) => h.habbitId !== id);
   saveDailySnapshot(todaySnapshot);
   // const habits = JSON.parse(localStorage.getItem("habits") || "[]");
@@ -97,8 +97,8 @@ const getDailySnapshotsRaw = (): IDailySnapshot[] => {
   }
 };
 
-export const getDailySnapshots = (): IDailySnapshot[] => {
-  fillHistory();
+export const getDailySnapshots = (today: Date): IDailySnapshot[] => {
+  fillHistory(today);
   return getDailySnapshotsRaw();
 };
 
@@ -115,9 +115,9 @@ export const saveDailySnapshot = (
       // Insert at proper position
       for (let i = 0; i < existingSnapshots.length; i++) {
         const element = existingSnapshots[i];
-        let isSameDay = element.date === snapshot.date;
-        let isAfterSnapshot = new Date(element.date) > new Date(snapshot.date);
-        let isLastElement = i === existingSnapshots.length - 1;
+        const isSameDay = element.date === snapshot.date;
+        const isAfterSnapshot = new Date(element.date) > new Date(snapshot.date);
+        const isLastElement = i === existingSnapshots.length - 1;
         
         if (isSameDay) {
           existingSnapshots[i] = snapshot;
@@ -146,17 +146,17 @@ export const saveDailySnapshot = (
 /**
  * Also creates snapshot if it did not exist
  */
-export const getTodaySnapshot = (): IDailySnapshot => {
-  const today = new Date().toISOString().split("T")[0];
+export const getTodaySnapshot = (today: Date): IDailySnapshot => {
   const snapshots = getDailySnapshotsRaw();
-  let todaySnapshot = snapshots.find((s) => s.date === today);
+  const todayDay = today.toISOString().split("T")[0];
+  let todaySnapshot = snapshots.find((s) => s.date === todayDay);
 
   if (!todaySnapshot) {
     // Create today's snapshot if it doesn't exist
     if (snapshots.length === 0) {
       // No previous snapshots - create empty snapshot that will be populated when habits are added
       todaySnapshot = {
-        date: today,
+        date: todayDay,
         habbits: [],
       };
     } else {
@@ -166,7 +166,7 @@ export const getTodaySnapshot = (): IDailySnapshot => {
       )[0];
 
       todaySnapshot = {
-        date: today,
+        date: todayDay,
         habbits: previousSnapshot.habbits.map((h) => ({
           habbitId: h.habbitId,
           habbitNeedCount: h.habbitNeedCount,
@@ -186,12 +186,12 @@ export const getTodaySnapshot = (): IDailySnapshot => {
  * If there are empty days from last snapshot day and today, fill theese days with snapshots
  * so we will understand lates that there were habbits but they were not incremented
  */
-export const fillHistory = (): void => {
+export const fillHistory = (today: Date): void => {
   // create todays snapshot to be sure it is created
-  getTodaySnapshot();
+  getTodaySnapshot(today);
 
-  // todat with time 00.00.00 for correct currentDate < today compare
-  const today = new Date(new Date().toISOString().split("T")[0]);
+  // today with time 00.00.00 for correct currentDate < today compare
+  const today00 = new Date(today.toISOString().split("T")[0]);
   let previousSnapshot;
   const snapshots = getDailySnapshotsRaw();
 
@@ -200,12 +200,12 @@ export const fillHistory = (): void => {
       b.date.localeCompare(a.date)
     )[1];
 
-    let currentDate = new Date(previousSnapshot.date);
+    const currentDate = new Date(previousSnapshot.date);
     currentDate.setDate(currentDate.getDate() + 1);
 
-    while (currentDate < today) {
-      let date = currentDate.toISOString().split("T")[0];
-      let snapshot = {
+    while (currentDate < today00) {
+      const date = currentDate.toISOString().split("T")[0];
+      const snapshot = {
         date: date,
         habbits: previousSnapshot.habbits.map((h) => {
           return {
@@ -226,8 +226,8 @@ export const fillHistory = (): void => {
 /**
  * Helper function to get current need count for a habit
  */
-export const getCurrentNeedCount = (habitId: string): number => {
-  const todaySnapshot = getTodaySnapshot();
+export const getCurrentNeedCount = (habitId: string, today: Date): number => {
+  const todaySnapshot = getTodaySnapshot(today);
 
   const habit = todaySnapshot.habbits.find((h) => h.habbitId === habitId);
   return habit?.habbitNeedCount || 1;
@@ -237,9 +237,10 @@ export const getCurrentNeedCount = (habitId: string): number => {
  * Helper function to get current actual count for a habit
  */
 export const getCurrentActualCount = (
-  habitId: string
+  habitId: string,
+  today: Date
 ): number => {
-  const todaySnapshot = getTodaySnapshot();
+  const todaySnapshot = getTodaySnapshot(today);
 
   const habit = todaySnapshot.habbits.find((h) => h.habbitId === habitId);
   return habit?.habbitDidCount || 0;
@@ -250,10 +251,11 @@ export const getCurrentActualCount = (
  */
 export const updateHabitCount = (
   habitId: string,
-  newCount: number
+  newCount: number,
+  today: Date
 ): boolean => {
   try {
-    let todaySnapshot = getTodaySnapshot();
+    const todaySnapshot = getTodaySnapshot(today);
 
     // Update the specific habit count
     const habitIndex = todaySnapshot.habbits.findIndex(
@@ -275,10 +277,11 @@ export const updateHabitCount = (
  */
 export const updateHabitNeedCount = (
   habitId: string,
-  newNeedCount: number
+  newNeedCount: number,
+  today: Date,
 ): boolean => {
   try {
-    let todaySnapshot = getTodaySnapshot();
+    const todaySnapshot = getTodaySnapshot(today);
 
     const habitIndex = todaySnapshot.habbits.findIndex(
       (h) => h.habbitId === habitId
@@ -317,6 +320,7 @@ export const updateHabitNeedCount = (
 
       return true;
     } catch (error) {
+      console.log(error);
       return false;
     }
   };
