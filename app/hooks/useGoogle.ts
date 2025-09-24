@@ -806,8 +806,10 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
 
   useEffect(() => {    
     console.log("useGoogle: getGoogleData effect called")
-    if (!today) {
-      console.log("useGoogle: no today in useGoogle effect")
+    if (!today || !refreshToken) {
+      console.log("useGoogle: no today or refresh token in useGoogle effect");
+      setLoadedData(undefined);
+      setState(GoogleState.NOT_CONNECTED);
       return;
     }
     
