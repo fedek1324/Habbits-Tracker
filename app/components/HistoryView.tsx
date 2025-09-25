@@ -1,11 +1,13 @@
 "use client";
 
 import IHabbit from "@/app/types/habbit";
+import INote from "@/app/types/note";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import IDailySnapshot from "@/app/types/dailySnapshot";
 
 interface HistoryViewProps {
   habits: IHabbit[],
+  notes: INote[],
   snapshots: IDailySnapshot[]
 }
 
@@ -19,9 +21,14 @@ type DailyHistory = {
     habbitNeedCount: number;
     habbitDidCount: number;
   }[];
+  notes: {
+    noteId: string;
+    noteName: string;
+    noteText: string;
+  }[];
 };
 
-const HistoryView: React.FC<HistoryViewProps> = ({habits, snapshots}) => {
+const HistoryView: React.FC<HistoryViewProps> = ({habits, notes, snapshots}) => {
   // const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
 
   // Transform snapshots to history format
@@ -34,6 +41,14 @@ const HistoryView: React.FC<HistoryViewProps> = ({habits, snapshots}) => {
         habbitText: habit?.text || 'Unknown Habit',
         habbitNeedCount: habbitSnapshot.habbitNeedCount,
         habbitDidCount: habbitSnapshot.habbitDidCount
+      };
+    }),
+    notes: (snapshot.notes || []).map(noteSnapshot => {
+      const note = notes.find(n => n.id === noteSnapshot.noteId);
+      return {
+        noteId: noteSnapshot.noteId,
+        noteName: note?.name || 'Unknown Note',
+        noteText: noteSnapshot.noteText
       };
     })
   })).reverse() : [];
@@ -104,38 +119,55 @@ const HistoryView: React.FC<HistoryViewProps> = ({habits, snapshots}) => {
               )}
             </div>
 
-            {/* Habits for this day */}
+            {/* Habits and notes for this day */}
             <div className="space-y-2">
-              {day.habits.length > 0 ? (
-                day.habits.map((habit) => (
-                  <div
-                    key={habit.habbitId}
-                    className={`
-                      flex justify-between items-center p-3 rounded-lg
-                      ${
-                        habit.habbitDidCount >= habit.habbitNeedCount
-                          ? "bg-green-50"
-                          : "bg-gray-50"
-                      }
-                    `}
-                  >
-                    <span className="text-sm text-gray-700">
-                      {habit.habbitText}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">
-                        {habit.habbitDidCount}/{habit.habbitNeedCount}
+              {day.habits.length > 0 || day.notes.length > 0 ? (
+                <>
+                  {day.habits.map((habit) => (
+                    <div
+                      key={habit.habbitId}
+                      className={`
+                        flex justify-between items-center p-3 rounded-lg
+                        ${
+                          habit.habbitDidCount >= habit.habbitNeedCount
+                            ? "bg-green-50"
+                            : "bg-gray-50"
+                        }
+                      `}
+                    >
+                      <span className="text-sm text-gray-700">
+                        {habit.habbitText}
                       </span>
-                      {habit.habbitDidCount >= habit.habbitNeedCount && (
-                        <IoCheckmarkCircle className="w-5 h-5 text-green-600" />
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">
+                          {habit.habbitDidCount}/{habit.habbitNeedCount}
+                        </span>
+                        {habit.habbitDidCount >= habit.habbitNeedCount && (
+                          <IoCheckmarkCircle className="w-5 h-5 text-green-600" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                  {day.notes.filter((note) => note.noteText && note.noteText.trim() !== "").map((note) => (
+                    <div
+                      key={note.noteId}
+                      className="p-3 rounded-lg bg-blue-50 border-l-4 border-blue-200"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-700">
+                          {note.noteName}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {note.noteText}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </>
               ) : (
                 <div className="p-3 rounded-lg bg-gray-50 text-center">
                   <span className="text-sm text-gray-500">
-                    No habits for this day
+                    No habits or notes for this day
                   </span>
                 </div>
               )}

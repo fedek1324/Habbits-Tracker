@@ -31,7 +31,7 @@ const NoteButton: React.FC<NoteButtonProps> = ({
   onDelete,
   onEdit,
 }) => {
-  const subtitle = `${text}`;
+  const subtitle = `${text.trim() === '' ? "No text" : text.trim()}`;
 
   const [isEditModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [newNoteName, setNewNoteName] = useState<string>(note.name);
