@@ -6,9 +6,9 @@ import { IoCheckmarkCircle } from "react-icons/io5";
 import IDailySnapshot from "@/app/types/dailySnapshot";
 
 interface HistoryViewProps {
-  habits: IHabbit[],
-  notes: INote[],
-  snapshots: IDailySnapshot[]
+  habits: IHabbit[];
+  notes: INote[];
+  snapshots: IDailySnapshot[];
 }
 
 // type Period = "daily" | "weekly" | "monthly";
@@ -28,30 +28,38 @@ type DailyHistory = {
   }[];
 };
 
-const HistoryView: React.FC<HistoryViewProps> = ({habits, notes, snapshots}) => {
+const HistoryView: React.FC<HistoryViewProps> = ({
+  habits,
+  notes,
+  snapshots,
+}) => {
   // const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
 
   // Transform snapshots to history format
-  const history: DailyHistory[] = snapshots ? snapshots.map(snapshot => ({
-    date: snapshot.date,
-    habits: snapshot.habbits.map(habbitSnapshot => {
-      const habit = habits.find(h => h.id === habbitSnapshot.habbitId);
-      return {
-        habbitId: habbitSnapshot.habbitId,
-        habbitText: habit?.text || 'Unknown Habit',
-        habbitNeedCount: habbitSnapshot.habbitNeedCount,
-        habbitDidCount: habbitSnapshot.habbitDidCount
-      };
-    }),
-    notes: (snapshot.notes || []).map(noteSnapshot => {
-      const note = notes.find(n => n.id === noteSnapshot.noteId);
-      return {
-        noteId: noteSnapshot.noteId,
-        noteName: note?.name || 'Unknown Note',
-        noteText: noteSnapshot.noteText
-      };
-    })
-  })).reverse() : [];
+  const history: DailyHistory[] = snapshots
+    ? snapshots
+        .map((snapshot) => ({
+          date: snapshot.date,
+          habits: snapshot.habbits.map((habbitSnapshot) => {
+            const habit = habits.find((h) => h.id === habbitSnapshot.habbitId);
+            return {
+              habbitId: habbitSnapshot.habbitId,
+              habbitText: habit?.text || "Unknown Habit",
+              habbitNeedCount: habbitSnapshot.habbitNeedCount,
+              habbitDidCount: habbitSnapshot.habbitDidCount,
+            };
+          }),
+          notes: (snapshot.notes || []).map((noteSnapshot) => {
+            const note = notes.find((n) => n.id === noteSnapshot.noteId);
+            return {
+              noteId: noteSnapshot.noteId,
+              noteName: note?.name || "Unknown Note",
+              noteText: noteSnapshot.noteText,
+            };
+          }),
+        }))
+        .reverse()
+    : [];
 
   // Function to get history data for a specific day from snapshots
   // Function to format display date based on day index
@@ -101,7 +109,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({habits, notes, snapshots}) => 
           </button>
         ))}
       </div> */}
-      
       {/* History List */}
       <div className="space-y-6">
         {history.map((day) => (
@@ -148,21 +155,28 @@ const HistoryView: React.FC<HistoryViewProps> = ({habits, notes, snapshots}) => 
                       </div>
                     </div>
                   ))}
-                  {day.notes.filter((note) => note.noteText && note.noteText.trim() !== "").map((note) => (
-                    <div
-                      key={note.noteId}
-                      className="p-3 rounded-lg bg-blue-50 border-l-4 border-blue-200"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-gray-700">
-                          {note.noteName}
-                        </span>
-                        <span className="text-sm text-gray-600">
-                          {note.noteText}
-                        </span>
+                  {day.notes
+                    .filter(
+                      (note) =>
+                        note.noteText &&
+                        note.noteText.trim() !== "" &&
+                        note.noteText !== "No text for that day"
+                    )
+                    .map((note) => (
+                      <div
+                        key={note.noteId}
+                        className="p-3 rounded-lg bg-blue-50 border-l-4 border-blue-200"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-medium text-gray-700">
+                            {note.noteName}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            {note.noteText}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </>
               ) : (
                 <div className="p-3 rounded-lg bg-gray-50 text-center">

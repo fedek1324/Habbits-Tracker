@@ -400,6 +400,7 @@ export const deleteNoteFromSnapshot = (id: string, today: Date): void => {
    */
   export const initializeHabitsLocalStorage = async (
     habits: IHabbit[],
+    notes: INote[],
     snapshots: IDailySnapshot[]
   ) => {
     try {
@@ -411,6 +412,12 @@ export const deleteNoteFromSnapshot = (id: string, today: Date): void => {
       for (const habit of habits) {
         addHabit(habit);
       }
+
+      // Add notes to localStorage
+      for (const note of notes) {
+        addNote(note);
+      }
+
 
       // Add all daily snapshots to localStorage
       for (const snapshot of snapshots) {

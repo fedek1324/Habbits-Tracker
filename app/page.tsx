@@ -93,8 +93,8 @@ export default function Home() {
     if (today) {
       if (loadedData) {
         console.log("Home: effect called Getting data from loaded data");
-        const { habits: habitsGoogle, snapshots: snapshotsGoogle } = loadedData;
-        initializeHabitsLocalStorage(habitsGoogle, snapshotsGoogle);
+        const { habits: habitsGoogle, notes: notesGoogle, snapshots: snapshotsGoogle } = loadedData;
+        initializeHabitsLocalStorage(habitsGoogle, notesGoogle, snapshotsGoogle);
         // fill empty days in local storage
         fillHistoryLocalStorage(today);
 
@@ -328,7 +328,7 @@ export default function Home() {
       for (const habit of todaySnapshot.habbits) {
         res.push({
           habitId: habit.habbitId,
-          text: habits.find((h) => h.id === habit.habbitId)?.text || "No text",
+          text: habits.find((h) => h.id === habit.habbitId)?.text || "No text for today",
           needCount: habit.habbitNeedCount,
           actualCount: habit.habbitDidCount,
         });

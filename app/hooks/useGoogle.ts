@@ -1,10 +1,11 @@
 "use client";
 
-import { getDailySnapshots, getHabits } from "@/app/services/apiLocalStorage";
+import { getDailySnapshots, getHabits, getNotes } from "@/app/services/apiLocalStorage";
 import IDailySnapshot from "@/app/types/dailySnapshot";
 import { GoogleState } from "@/app/types/googleState";
 import IHabbit from "@/app/types/habbit";
-import IHabbitsData from "@/app/types/habitsData";
+import IHabitsAndNotesData from "@/app/types/habitsData";
+import INote from "@/app/types/note";
 import axios from "axios";
 import { useCallback, useEffect, useState, useRef } from "react";
 
@@ -40,30 +41,65 @@ const refreshAccessToken = async (
 
 /**
  * using spreadSheetData from agtument NOT USING PROPER METHODS
- * creates habits info and returns it
+ * creates habits and notes info and returns it
  */
-const parseSpreadsheetDataToHabits = (spreadsheetData: {
-  headers: string[];
-  dataRows: string[][];
-}) => {
+const parseSpreadsheetDataToHabits = (allRows: string[][]) => {
   try {
-    console.log("Parsing spreadsheet data to habits and snapshots...");
+    console.log("Parsing spreadsheet data to habits, notes and snapshots...");
 
-    const { headers, dataRows } = spreadsheetData;
-
-    // Extract habit names from headers (skip first column which is "Date")
-    const habitNames = headers.slice(1);
-    console.log("Found habit names:", habitNames);
-
-    if (habitNames.length === 0) {
-      console.log("No habits found in spreadsheet");
-      return { habits: [], snapshots: [] };
+    if (!allRows || allRows.length < 3) {
+      console.log("Not enough data in spreadsheet - need at least 3 rows (category, headers, data)");
+      return { habits: [], notes: [], snapshots: [] };
     }
+
+    // Expect new two-header format: first row is categories, second row is column names
+    const categoryRow = allRows[0];
+    const columnNamesRow = allRows[1];
+    const dataRows = allRows.slice(2);
+
+    // Extract column names (skip first column which is "Date")
+    const allColumnNames = columnNamesRow.slice(1);
+    console.log("Found all column names:", allColumnNames);
+
+    if (allColumnNames.length === 0) {
+      console.log("No data columns found in spreadsheet");
+      return { habits: [], notes: [], snapshots: [] };
+    }
+
+    // Use category row to determine column types
+    const habitNames: string[] = [];
+    const noteNames: string[] = [];
+
+    for (let i = 1; i < columnNamesRow.length; i++) {
+      const category = categoryRow[i] || ""; // Use empty string if category is undefined
+      const columnName = allColumnNames[i - 1];
+
+      if (category === "Habits") {
+        habitNames.push(columnName);
+      } else if (category === "Notes") {
+        noteNames.push(columnName);
+      } else if (category === "" && habitNames.length > 0 && noteNames.length === 0) {
+        // Empty category after "Habits" means still in habits section
+        habitNames.push(columnName);
+      } else if (category === "" && noteNames.length > 0) {
+        // Empty category after "Notes" means still in notes section
+        noteNames.push(columnName);
+      }
+    }
+
+    console.log("Found habit columns:", habitNames);
+    console.log("Found note columns:", noteNames);
 
     // Create habit objects with unique IDs
     const habits: IHabbit[] = habitNames.map((name) => ({
       id: crypto.randomUUID(),
       text: name,
+    }));
+
+    // Create note objects with unique IDs
+    const notes: INote[] = noteNames.map((name) => ({
+      id: crypto.randomUUID(),
+      name: name,
     }));
 
     // Create daily snapshots from the data
@@ -81,39 +117,61 @@ const parseSpreadsheetDataToHabits = (spreadsheetData: {
         habbitDidCount: number;
       }> = [];
 
-      // Parse each habit's progress for this date
-      for (let i = 1; i < row.length && i <= habitNames.length; i++) {
-        const progressStr = row[i];
-        if (!progressStr) continue; // Skip empty cells
+      const noteData: Array<{
+        noteId: string;
+        noteText: string;
+      }> = [];
 
-        // Parse "actual/target" format (e.g., "2/3")
-        const progressMatch = progressStr.match(/^(\d+)\/(\d+)$/);
-        if (progressMatch) {
-          const actualCount = parseInt(progressMatch[1]);
-          const targetCount = parseInt(progressMatch[2]);
-          const habitId = habits[i - 1].id; // -1 because habits array doesn't include date column
+      // Process all columns after the date column
+      for (let i = 1; i < row.length && i <= allColumnNames.length; i++) {
+        const cellValue = row[i];
+        const columnName = allColumnNames[i - 1]; // -1 because allColumnNames doesn't include Date
 
-          habitData.push({
-            habbitId: habitId,
-            habbitNeedCount: targetCount,
-            habbitDidCount: actualCount,
-          });
+        if (habitNames.includes(columnName)) {
+          // This is a habit column - parse "actual/target" format
+          if (cellValue && cellValue.match(/^\d+\/\d+$/)) {
+            const progressMatch = cellValue.match(/^(\d+)\/(\d+)$/);
+            if (progressMatch) {
+              const actualCount = parseInt(progressMatch[1]);
+              const targetCount = parseInt(progressMatch[2]);
+              const habitId = habits.find(h => h.text === columnName)?.id;
+
+              if (habitId) {
+                habitData.push({
+                  habbitId: habitId,
+                  habbitNeedCount: targetCount,
+                  habbitDidCount: actualCount,
+                });
+              }
+            }
+          }
+        } else if (noteNames.includes(columnName)) {
+          // This is a note column - store the text
+          const noteId = notes.find(n => n.name === columnName)?.id;
+
+          if (noteId && cellValue) {
+            noteData.push({
+              noteId: noteId,
+              noteText: cellValue,
+            });
+          }
         }
       }
 
       snapshots.push({
         date: date,
         habbits: habitData,
+        notes: noteData,
       });
     });
 
     console.log(
-      `Parsed ${habits.length} habits and ${snapshots.length} daily snapshots`
+      `Parsed ${habits.length} habits, ${notes.length} notes, and ${snapshots.length} daily snapshots`
     );
-    return { habits, snapshots };
+    return { habits, notes, snapshots };
   } catch (error) {
     console.error("❌ Error parsing spreadsheet data:", error);
-    return { habits: [], snapshots: [] };
+    return { habits: [], notes: [], snapshots: [] };
   }
 };
 
@@ -131,7 +189,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
   const [spreadsheetId, setSpreadsheetId] = useState<string>();
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string>();
 
-  const [loadedData, setLoadedData] = useState<IHabbitsData>();
+  const [loadedData, setLoadedData] = useState<IHabitsAndNotesData>();
 
   let ignoreFetch = false;
 
@@ -292,11 +350,11 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
 
         if (!rows || rows.length === 0) {
           console.log("Spreadsheet is empty");
-          return { headers: [], dataRows: [] };
+          return [];
         }
 
         console.log("Successfully read spreadsheet data:", rows.length, "rows");
-        return { headers: rows[0], dataRows: rows.slice(1) };
+        return rows;
       } catch (error) {
         console.error("❌ Error reading spreadsheet data:", error);
         return null;
@@ -312,6 +370,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
     ): Promise<
       | {
           habits: IHabbit[];
+          notes: INote[];
           snapshots: IDailySnapshot[];
         }
       | undefined
@@ -377,7 +436,8 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
       accessToken: string,
       spreadsheetId: string,
       habits: IHabbit[],
-      habitSnapshots: IDailySnapshot[]
+      habitSnapshots: IDailySnapshot[],
+      notes: INote[]
     ) => {
       try {
         console.log(
@@ -423,14 +483,41 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
           habitIdToName.set(habit.id, habit.text);
         });
 
+        // Create note ID to name mapping from current notes
+        const noteIdToName = new Map<string, string>();
+        notes.forEach((note) => {
+          noteIdToName.set(note.id, note.name);
+        });
+
         // Get current habit names from local data
         const currentHabitNames = Array.from(
           new Set(habits.map((h) => h.text))
         ).sort();
         console.log("Current habits:", currentHabitNames);
 
-        // Create headers: Date + habit names
-        const headers = [["Date", ...currentHabitNames]];
+        // Get current note names from local data
+        const currentNoteNames = Array.from(
+          new Set(notes.map((n) => n.name))
+        ).sort();
+        console.log("Current notes:", currentNoteNames);
+
+        // Create headers with two rows: category row and column names row
+        const categoryRow = ["Date"];
+
+        // Add "Habits" label only at the first habit column, empty for others
+        if (currentHabitNames.length > 0) {
+          categoryRow.push("Habits");
+          categoryRow.push(...Array(currentHabitNames.length - 1).fill(""));
+        }
+
+        // Add "Notes" label only at the first note column, empty for others
+        if (currentNoteNames.length > 0) {
+          categoryRow.push("Notes");
+          categoryRow.push(...Array(currentNoteNames.length - 1).fill(""));
+        }
+
+        const columnNamesRow = ["Date", ...currentHabitNames, ...currentNoteNames];
+        const headers = [categoryRow, columnNamesRow];
 
         // Create a data structure: Map<date, Map<habitName, progress>>
         const dateData = new Map<string, Map<string, string>>();
@@ -450,6 +537,18 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
               dayData.set(habitName, progress);
             }
           });
+
+          // Process notes for this day
+          if (snapshot.notes) {
+            snapshot.notes.forEach((noteSnapshot) => {
+              const noteName = noteIdToName.get(noteSnapshot.noteId);
+              if (noteName && currentNoteNames.includes(noteName)) {
+                // Use note text if available, "No text for that day" if empty, or "" if note doesn't exist
+                const noteText = noteSnapshot.noteText || "No text for that day";
+                dayData.set(noteName, noteText);
+              }
+            });
+          }
         });
 
         // Convert to rows for the spreadsheet
@@ -465,6 +564,11 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
             row.push(dayData.get(habitName) || ""); // Empty if no data for this habit on this date
           });
 
+          // Add data for each note column (in same order as headers)
+          currentNoteNames.forEach((noteName) => {
+            row.push(dayData.get(noteName) || ""); // Empty if no data for this note on this date
+          });
+
           dataRows.push(row);
         });
 
@@ -472,7 +576,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
         const allRows = [...headers, ...dataRows];
 
         // Calculate dimensions for the update
-        const numColumns = currentHabitNames.length + 1; // +1 for Date column
+        const numColumns = currentHabitNames.length + currentNoteNames.length + 1; // +1 for Date column
         const numRows = allRows.length;
 
         console.log(
@@ -512,13 +616,38 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
               fields: "userEnteredValue",
             },
           },
-          // Apply header formatting
+          // Apply header formatting for category row (row 0)
           {
             repeatCell: {
               range: {
                 sheetId: sheetId,
                 startRowIndex: 0,
                 endRowIndex: 1,
+                startColumnIndex: 0,
+                endColumnIndex: numColumns,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: { red: 0.3, green: 0.3, blue: 0.3 },
+                  textFormat: {
+                    foregroundColor: { red: 1, green: 1, blue: 1 },
+                    fontSize: 14,
+                    bold: true,
+                  },
+                  horizontalAlignment: "CENTER",
+                  verticalAlignment: "MIDDLE",
+                },
+              },
+              fields: "userEnteredFormat",
+            },
+          },
+          // Apply header formatting for column names row (row 1)
+          {
+            repeatCell: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 1,
+                endRowIndex: 2,
                 startColumnIndex: 0,
                 endColumnIndex: numColumns,
               },
@@ -542,7 +671,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
             repeatCell: {
               range: {
                 sheetId: sheetId,
-                startRowIndex: 1,
+                startRowIndex: 2,
                 endRowIndex: numRows,
                 startColumnIndex: 0,
                 endColumnIndex: numColumns,
@@ -612,13 +741,13 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
               },
             },
           },
-          // Freeze first row and first column
+          // Freeze first two rows and first column
           {
             updateSheetProperties: {
               properties: {
                 sheetId: sheetId,
                 gridProperties: {
-                  frozenRowCount: 1,
+                  frozenRowCount: 2,
                   frozenColumnCount: 1,
                 },
               },
@@ -650,7 +779,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
         }
 
         console.log(
-          `✅ Successfully updated spreadsheet with ${dataRows.length} data rows and ${currentHabitNames.length} habit columns in one atomic operation`
+          `✅ Successfully updated spreadsheet with ${dataRows.length} data rows, ${currentHabitNames.length} habit columns, and ${currentNoteNames.length} note columns in one atomic operation`
         );
       } catch (error) {
         console.error("❌ Error populating spreadsheet with habits:", error);
@@ -668,7 +797,8 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
       refreshToken: string,
       accessToken: string,
       habits: IHabbit[],
-      habitSnapshots: IDailySnapshot[]
+      habitSnapshots: IDailySnapshot[],
+      notes: INote[]
     ) => {
       // Create a new spreadsheet
       console.log("Creating new habits spreadsheet...");
@@ -712,7 +842,8 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
         accessToken,
         spreadsheet.spreadsheetId,
         habits,
-        habitSnapshots
+        habitSnapshots,
+        notes
       );
 
       // Update state with new spreadsheet info
@@ -737,12 +868,14 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
       | {
           snapshots: IDailySnapshot[];
           habits: IHabbit[];
+          notes: INote[];
         }
       | undefined
     > => {
       console.log('useGoogle: Getting habits...');
       const habits = getHabits();
       const snapshots = getDailySnapshots(today);
+      const notes = getNotes();
       if (refreshTokenArg) {
         // Automatically try to get a fresh access token
         const newAccessToken = await refreshAccessToken(refreshTokenArg);
@@ -759,14 +892,15 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
               refreshTokenArg,
               newAccessToken,
               habits,
-              snapshots
+              snapshots,
+              notes
             );
 
             if (!spreadSheet) {
               // throw new Error("Spreadsheet couldn't be created");
               return undefined;
             }
-            return { habits, snapshots: snapshots };
+            return { habits, notes, snapshots: snapshots };
           } else {
             return googleData;
           }
@@ -777,7 +911,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
           return undefined;
         }
       }
-      return { habits, snapshots };
+      return { habits, notes, snapshots };
     },
     [createGoogleSpreadSheet, getData, setAccessToken]
   );
@@ -828,6 +962,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
     setState(GoogleState.UPDATING);
     const habits = getHabits();
     const snapshots = getDailySnapshots(today);
+    const notes = getNotes();
     try {
       console.log("Manual sync: Pushing local data to spreadsheet...");
 
@@ -838,7 +973,8 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
           accessTokenRef.current ?? "",
           spreadsheetId,
           habits,
-          snapshots
+          snapshots,
+          notes
         );
         console.log("✅ Successfully pushed local data to spreadsheet");
         setState(GoogleState.CONNECTED);
