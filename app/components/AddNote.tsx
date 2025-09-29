@@ -3,51 +3,43 @@
 import { v4 as uuidv4 } from "uuid";
 import { FormEventHandler, useState } from "react";
 import Modal from "./Modal";
-import IHabbit from "@/app/types/habbit";
+import INote from "../types/note";
 
-const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit, needCount: number) => void }> = ({
+const AddNote: React.FC<{ onAdd: (note: INote, text: string) => void }> = ({
   onAdd,
 }) => {
-  const habbitCountDefault = "";
-  const habbitTextDefault = "";
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [newHabbitText, setNewHabbitText] = useState<string>(habbitTextDefault);
-  const [newHabbitCount, setNewHabbitCount] = useState<string>(habbitCountDefault);
-  const [countError, setCountError] = useState<string>(""); // for error message
-  const [textError, setTextError] = useState<string>(""); // for error message
+  const [newNoteName, setNewNoteName] = useState<string>("");
+  const [newNoteText, setNewNoteText] = useState<string>("");
+  const [newNoteNameError, setNewNoteNameError] = useState<string>("");
+  const [newNoteTextError, setNewNoteTextError] = useState<string>("");
 
-  const handleSubmitNewHabbit: FormEventHandler<HTMLFormElement> = async (
+  const handleSubmitNewNote: FormEventHandler<HTMLFormElement> = async (
     e
   ) => {
     e.preventDefault();
 
-    let habbitCount;
-    if (!/^\d+$/.test(newHabbitCount)) {
-      setCountError("Enter a valid number");
-      return;
-    } else {
-      habbitCount = parseInt(newHabbitCount, 10);
-      if (!(habbitCount > 0 && habbitCount < 1e6)) {
-        setCountError("Enter a valid number more than 0");
-        return;
-      }
-    }
 
-    if (newHabbitText === "" || newHabbitText.length > 1e3) {
-      setTextError("Enter a valid text");
+    if (newNoteName === "" || newNoteName.length > 1e3) {
+      setNewNoteNameError("Enter a valid text");
       return;
     }
 
-    const newHabbit = {
+    if (newNoteText === "" || newNoteText.length > 1e3) {
+      setNewNoteTextError("Enter a valid text");
+      return;
+    }
+
+    const newNote = {
       id: uuidv4(),
-      text: newHabbitText.trim(),
+      name: newNoteName,
     };
 
-    onAdd(newHabbit, habbitCount);
-    setNewHabbitText(habbitTextDefault);
-    setNewHabbitCount(habbitCountDefault);
-    setCountError("");
-    setTextError("");
+    onAdd(newNote, newNoteText);
+    setNewNoteName("");
+    setNewNoteText("");
+    setNewNoteNameError("");
+    setNewNoteTextError("");
     setModalOpen(false);
   };
 
@@ -64,61 +56,60 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit, needCount: number) => void 
             clipRule="evenodd"
           />
         </svg>
-        <span>Add habbit</span>
+        <span>Add note</span>
       </button>
 
       <Modal modalOpen={modalOpen} setModalOpen={setModalOpen}>
-        <form onSubmit={handleSubmitNewHabbit} className="flex flex-col gap-4">
-          <h2 className="text-xl font-semibold">Add new habit</h2>
+        <form onSubmit={handleSubmitNewNote} className="flex flex-col gap-4">
+          <h2 className="text-xl font-semibold">Add new note</h2>
 
           {/* Habbit name */}
           <div className="flex flex-col">
             <input
               type="text"
-              placeholder="Habit name"
-              value={newHabbitText}
+              placeholder="Note name"
+              value={newNoteName}
               onChange={(e) => {
-                setNewHabbitText(e.target.value);
-                setTextError("");
+                setNewNoteName(e.target.value);
+                setNewNoteNameError("");
               }}
-              aria-label="Habbit name"
+              aria-label="Note name"
               className={
                 "border border-gray-300 rounded-lg " +
                 "px-4 py-2 focus:outline-none " +
                 "focus:ring-2 focus:ring-blue-400" +
-                (textError
+                (newNoteNameError
                   ? "border-red-500 focus:ring-red-300"
                   : "border-gray-300 focus:ring-blue-400")
               }
             />
-            {textError && (
-              <p className="mt-1 text-sm text-red-600">{textError}</p>
+            {newNoteNameError && (
+              <p className="mt-1 text-sm text-red-600">{newNoteNameError}</p>
             )}
           </div>
 
-          {/* Repetitions count */}
+          {/* Note text */}
           <div className="flex flex-col">
             <input
               type="text"
-              inputMode="numeric"
-              placeholder="Repetitions per day"
-              value={newHabbitCount}
+              placeholder="Note content"
+              value={newNoteText}
               onChange={(e) => {
-                setNewHabbitCount(e.target.value);
-                setCountError("");
+                setNewNoteText(e.target.value);
+                setNewNoteTextError("");
               }}
-              aria-label="Repetitions per day"
+              aria-label="Note content"
               className={
                 "border border-gray-300 rounded-lg " +
                 "px-4 py-2 focus:outline-none " +
                 "focus:ring-2 focus:ring-blue-400" +
-                (countError
+                (newNoteTextError
                   ? "border-red-500 focus:ring-red-300"
                   : "border-gray-300 focus:ring-blue-400")
               }
             />
-            {countError && (
-              <p className="mt-1 text-sm text-red-600">{countError}</p>
+            {newNoteTextError && (
+              <p className="mt-1 text-sm text-red-600">{newNoteTextError}</p>
             )}
           </div>
 
@@ -134,4 +125,4 @@ const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit, needCount: number) => void 
   );
 };
 
-export default AddHabbit;
+export default AddNote;

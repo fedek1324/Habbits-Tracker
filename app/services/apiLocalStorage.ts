@@ -2,10 +2,12 @@
 
 import IHabbit from "../types/habbit";
 import IDailySnapshot from "../types/dailySnapshot";
+import INote from "../types/note";
 
 // Storage keys for localStorage
 const HABITS_STORAGE_KEY = "habits";
 const DAILY_SNAPSHOTS_STORAGE_KEY = "dailySnapshots";
+const NOTES_STORAGE_KEY = "notes";
 
 /**
  * Adds a new habit to localStorage
@@ -74,7 +76,7 @@ export const updateHabit = (updatedHabit: IHabbit): void => {
 /**
  * delete Habbit in todays' snapshot
  */
-export const deleteHabbit = (id: string, today: Date): void => {
+export const deleteHabbitFromSnapshot = (id: string, today: Date): void => {
   const todaySnapshot = getTodaySnapshot(today);
   todaySnapshot.habbits = todaySnapshot.habbits.filter((h) => h.habbitId !== id);
   saveDailySnapshot(todaySnapshot);
@@ -158,6 +160,7 @@ export const getTodaySnapshot = (today: Date): IDailySnapshot => {
       todaySnapshot = {
         date: todayDay,
         habbits: [],
+        notes: []
       };
     } else {
       // Get previous day's snapshot and reset counts to 0
@@ -172,13 +175,16 @@ export const getTodaySnapshot = (today: Date): IDailySnapshot => {
           habbitNeedCount: h.habbitNeedCount,
           habbitDidCount: 0,
         })),
+        notes: previousSnapshot.notes?.map((n) => ({
+          noteId: n.noteId,
+          noteText: ""
+        })) || []
       };
     }
     
     // Save the new snapshot
     saveDailySnapshot(todaySnapshot);
   }
-
   return todaySnapshot;
 };
 
@@ -214,6 +220,10 @@ export const fillHistory = (today: Date): void => {
             habbitDidCount: 0,
           };
         }),
+        notes: previousSnapshot.notes?.map((n) => ({
+          noteId: n.noteId,
+          noteText: ""
+        })) || []
       };
 
       saveDailySnapshot(snapshot);
@@ -297,21 +307,117 @@ export const updateHabitNeedCount = (
   }
 };
 
+/**
+ * Notes management functions
+ */
+
+/**
+ * Adds a new note to localStorage
+ */
+export const addNote = (note: INote): boolean => {
+  try {
+    const existingNotesJson = localStorage.getItem(NOTES_STORAGE_KEY);
+    const existingNotes: INote[] = existingNotesJson
+      ? JSON.parse(existingNotesJson)
+      : [];
+
+    // Check if note with this id already exists
+    const noteExists = existingNotes.some(
+      (existingNote) => existingNote.id === note.id
+    );
+    if (noteExists) {
+      return false;
+    }
+
+    // Add new note
+    const updatedNotes = [...existingNotes, note];
+
+    // Save updated list to localStorage
+    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(updatedNotes));
+
+    return true;
+  } catch (error) {
+    console.error("Error adding note to localStorage:", error);
+    return false;
+  }
+};
+
+/**
+ * Get all notes from localStorage
+ */
+export const getNotes = (): INote[] => {
+  try {
+    const notesJson = localStorage.getItem(NOTES_STORAGE_KEY);
+    return notesJson ? JSON.parse(notesJson) : [];
+  } catch (error) {
+    console.error("Error getting notes from localStorage:", error);
+    return [];
+  }
+};
+
+/**
+ * Get a single note by ID
+ */
+export const getNote = (id: string): INote | undefined => {
+  try {
+    const notesJson = localStorage.getItem(NOTES_STORAGE_KEY);
+    const notes: INote[] = notesJson ? JSON.parse(notesJson) : [];
+    return notes.find((n) => n.id === id);
+  } catch (error) {
+    console.error("Error getting note from localStorage:", error);
+    return undefined;
+  }
+};
+
+/**
+ * Update a note in localStorage
+ */
+export const updateNote = (updatedNote: INote): boolean => {
+  try {
+    const notes = JSON.parse(localStorage.getItem(NOTES_STORAGE_KEY) || "[]");
+    const updated = notes.map((note: INote) =>
+      note.id === updatedNote.id ? updatedNote : note
+    );
+    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(updated));
+    return true;
+  } catch (error) {
+    console.error("Error updating note:", error);
+    return false;
+  }
+};
+
+/**
+ * Delete note from today's snapshot
+ */
+export const deleteNoteFromSnapshot = (id: string, today: Date): void => {
+  const todaySnapshot = getTodaySnapshot(today);
+  todaySnapshot.notes = todaySnapshot.notes.filter((n) => n.noteId !== id);
+  saveDailySnapshot(todaySnapshot);
+};
+
   /**
    * using proper methods like addHabit and saveDailySnapshot initializesHabits
    */
   export const initializeHabitsLocalStorage = async (
     habits: IHabbit[],
+    notes: INote[],
     snapshots: IDailySnapshot[]
   ) => {
     try {
       localStorage.removeItem(DAILY_SNAPSHOTS_STORAGE_KEY);
       localStorage.removeItem(HABITS_STORAGE_KEY);
+      localStorage.removeItem(NOTES_STORAGE_KEY);
 
       // Add all habits to localStorage
       for (const habit of habits) {
         addHabit(habit);
       }
+
+      // Add notes to localStorage
+      for (const note of notes) {
+        addNote(note);
+      }
+
 
       // Add all daily snapshots to localStorage
       for (const snapshot of snapshots) {
