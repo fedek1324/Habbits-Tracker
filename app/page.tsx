@@ -428,7 +428,7 @@ export default function Home() {
               <AddNote onAdd={handleAddNote} />
             </>
           ) : (
-            <HistoryView habits={habits} notes={notes} snapshots={snapshots} />
+            <HistoryView habits={habits} notes={notes} snapshots={snapshots} today={today} />
           )}
         </main>
 

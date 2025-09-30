@@ -922,6 +922,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
       getDataCheckEmpty(refreshToken, today)
         .then((res) => {
           if (res) {
+            console.log(ignoreFetch);
             if (!ignoreFetch) {
               setLoadedData(res);
               setState(GoogleState.CONNECTED);
@@ -950,6 +951,7 @@ export const useGoogle = (today: Date | undefined, refreshToken: string) => {
     getGoogleData(today);
 
     return () => {
+      console.log("un mount");
       ignoreFetch = true;
     }
   }, [getGoogleData]);

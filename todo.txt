@@ -35,6 +35,8 @@ seen when i delete column in google but there was habit in local storage
 
 set current date in useEffect and then filter habits for today habits render
 
+PLAN HABITS and notes: I any column is filled already, consider it
+
 Use Redux
 Use memo for habbit button to not repaint all habbit buttons on habbit increase counter button click
 add tests (unit and e2e)

@@ -9,6 +9,7 @@ interface HistoryViewProps {
   habits: IHabbit[];
   notes: INote[];
   snapshots: IDailySnapshot[];
+  today: Date;
 }
 
 // type Period = "daily" | "weekly" | "monthly";
@@ -32,12 +33,19 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   habits,
   notes,
   snapshots,
+  today,
 }) => {
   // const [selectedPeriod, setSelectedPeriod] = useState<Period>("daily");
 
   // Transform snapshots to history format
   const history: DailyHistory[] = snapshots
     ? snapshots
+        .filter((snapshot) => {
+          // today with time 00.00.00 for correct currentDate < today compare
+          const today00 = new Date(today.toISOString().split("T")[0]);
+          const snapshotDate = new Date(snapshot.date);
+          return snapshotDate <= today00;
+        })
         .map((snapshot) => ({
           date: snapshot.date,
           habits: snapshot.habbits.map((habbitSnapshot) => {

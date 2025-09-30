@@ -190,7 +190,7 @@ export const getTodaySnapshot = (today: Date): IDailySnapshot => {
 
 /**
  * If there are empty days from last snapshot day and today, fill theese days with snapshots
- * so we will understand lates that there were habbits but they were not incremented
+ * so we will understand later that there were habbits but they were not incremented
  */
 export const fillHistory = (today: Date): void => {
   // create todays snapshot to be sure it is created
@@ -207,6 +207,8 @@ export const fillHistory = (today: Date): void => {
     )[1];
 
     const currentDate = new Date(previousSnapshot.date);
+    // increase current date by 1 to compare with today. 
+    // If it makes day like 32 it is transformed to new month automatically
     currentDate.setDate(currentDate.getDate() + 1);
 
     while (currentDate < today00) {
