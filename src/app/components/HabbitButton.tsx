@@ -1,4 +1,4 @@
-import IHabbit from "@/app/types/habbit";
+import IHabbit from "@/src/app/types/habbit";
 import { FormEventHandler, useEffect, useState } from "react";
 import { LuTrash } from "react-icons/lu";
 import { MdOutlineEdit } from "react-icons/md";

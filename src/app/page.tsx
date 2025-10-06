@@ -24,19 +24,19 @@ import {
   getNotes,
   updateNote,
   deleteNoteFromSnapshot,
-} from "@/app/services/apiLocalStorage";
+} from "@/src/app/services/apiLocalStorage";
 
 import {
   registerSyncFunction,
   triggerSync,
   unregisterSyncFunction,
-} from "@/app/services/syncManager";
+} from "@/src/app/services/syncManager";
 
-import IHabbit from "@/app/types/habbit";
-import IDailySnapshot from "@/app/types/dailySnapshot";
-import { getDailySnapshots } from "@/app/services/apiLocalStorage";
-import { GoogleState } from "@/app/types/googleState";
-import { useGoogle } from "@/app/hooks/useGoogle";
+import IHabbit from "@/src/app/types/habbit";
+import IDailySnapshot from "@/src/app/types/dailySnapshot";
+import { getDailySnapshots } from "@/src/app/services/apiLocalStorage";
+import { GoogleState } from "@/src/app/types/googleState";
+import { useGoogle } from "@/src/app/hooks/useGoogle";
 import INote from "./types/note";
 import NoteButton from "./components/NoteButton";
 
