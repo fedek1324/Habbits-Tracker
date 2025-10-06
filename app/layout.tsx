@@ -3,8 +3,8 @@ import "./globals.css";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 export const metadata: Metadata = {
-  title: "Habbits tracker",
-  description: "Habbits tracker app",
+  title: "Habits tracker",
+  description: "Habits tracker app",
 };
 
 export default function RootLayout({
