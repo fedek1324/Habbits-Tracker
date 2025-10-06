@@ -1,22 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
-import type { Action } from "@reduxjs/toolkit";
-
-interface CounterState {
-    value: number
-}
-
-function counterReducer(state: CounterState = {value: 1}, action: Action) {
-    switch (action.type) {
-        // handle actions here
-        default:
-            return state;
-    }
-}
+import habitsReducer from "./features/habitsAndNotes/habitsSlice";
+import notesReducer from "./features/habitsAndNotes/notesSlice";
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
-        counter: counterReducer
+        habits: habitsReducer,
+        notes: notesReducer
     }
   })
 }
