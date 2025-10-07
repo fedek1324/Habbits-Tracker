@@ -1,19 +1,19 @@
-// import { Middleware } from '@reduxjs/toolkit';
-// import { RootState } from '../store'; // ваш тип состояния
-// import { initializeHabitsLocalStorage } from '@/src/app/services/apiLocalStorage'; // ваша функция
+import { Middleware } from '@reduxjs/toolkit';
+import { initializeHabitsLocalStorage } from '@/src/app/services/apiLocalStorage'; // ваша функция
 
-// export const localStorageMiddleware: Middleware<{}, RootState> = 
-//   (store) => (next) => (action) => {
-//     // Сначала пропускаем action дальше
-//     const result = next(action);
+export const localStorageMiddleware: Middleware = 
+  (store) => (next) => (action) => {
+    // At first pass action down
+    const result = next(action);
     
-//     // После обновления state сохраняем в localStorage
-//     const state = store.getState();
-//     initializeHabitsLocalStorage(
-//       state.habits.items, // или state.yourSliceName.habits
-//       state.notes.items,
-//       state.snapshots.items
-//     );
+    // After state refresh update local storage
+    // TODO check action types
+    const state = store.getState();
+    initializeHabitsLocalStorage(
+      state.habits.items,
+      state.notes.items,
+      state.snapshots.items
+    );
     
-//     return result;
-//   };
+    return result;
+  };

@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import habitsReducer from "./features/habitsAndNotes/habitsSlice";
 import notesReducer from "./features/habitsAndNotes/notesSlice";
 import snapshotsReducer from "./features/habitsAndNotes/snapshotsSlice";
+import { localStorageMiddleware } from "./middleware/localStorageMiddleware"
 
 export const makeStore = () => {
   return configureStore({
@@ -10,6 +11,8 @@ export const makeStore = () => {
         notes: notesReducer,
         snapshots: snapshotsReducer
     },
+    middleware: getDefaultMiddleware =>
+      getDefaultMiddleware().prepend(localStorageMiddleware),
   })
 }
 
