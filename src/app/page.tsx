@@ -154,13 +154,13 @@ export default function Home() {
   const handleAddHabit = async (newHabbit: IHabbit, needCount: number) => {
     dispatch(addHabitWithSnapshot({ habit: newHabbit, initialNeedCount: needCount }))
 
-    // await updateGoogle("handleAdd");
+    await updateGoogle("handleAdd");
   };
 
   const handleIncrement = async (id: string) => {
     dispatch(incrementHabitDidCount(id));
 
-    // await updateGoogle("handleIncrement");
+    await updateGoogle("handleIncrement");
   };
 
   const handleDelete = async (id: string) => {
@@ -176,7 +176,7 @@ export default function Home() {
     console.log("After dispatch - todaySnapshot:", todaySnapshot);
 
     // Update google
-    // await updateGoogle("handleDelete");
+    await updateGoogle("handleDelete");
   };
 
   const handleEdit = async (
@@ -189,12 +189,12 @@ export default function Home() {
     dispatch(updateHabitNeedCount({habitId: habitChanged.id, needCount: newNeedCount}));
     dispatch(updateHabitDidCount({habitId: habitChanged.id, count: newActualCount}));
 
-    // await updateGoogle("handleEdit");
+    await updateGoogle("handleEdit");
   };
 
   const handleAddNote = async (newNote: INote, text: string) => {
     dispatch(addNoteWithSnapshot({note: newNote, initialText: text}));
-    // await updateGoogle("handleAddNote");
+    await updateGoogle("handleAddNote");
   };
 
   const handleNoteEdit = async (noteChanged: INote, noteText: string) => {
@@ -203,7 +203,7 @@ export default function Home() {
     dispatch(updateNoteText({noteId: noteChanged.id, text: noteText}));
 
     // Update google
-    // await updateGoogle("handleNoteEdit");
+    await updateGoogle("handleNoteEdit");
   };
 
   const handleNoteDelete = async (id: string) => {
@@ -212,7 +212,7 @@ export default function Home() {
     dispatch(deleteNoteFromSnapshot(id));
 
     // Update google
-    // await updateGoogle("handleNoteDelete");
+    await updateGoogle("handleNoteDelete");
   };
   
   const displayHabits: DispalyHabbit[] = useMemo(() => {
