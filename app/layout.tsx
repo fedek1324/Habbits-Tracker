@@ -19,6 +19,22 @@ export default function RootLayout({
         style={{ height: "initial" }}
       >
         <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-DB83P462D8"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-DB83P462D8');
+            `,
+          }}
+        />
+        <Script
           id="yandex-metrika"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
