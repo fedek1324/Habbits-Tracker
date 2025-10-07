@@ -89,7 +89,7 @@ export const deleteHabbitFromSnapshot = (id: string, today: Date): void => {
 /**
  * Daily snapshots functions
  */
-const getDailySnapshotsRaw = (): IDailySnapshot[] => {
+export const getDailySnapshotsRaw = (): IDailySnapshot[] => {
   try {
     const snapshotsJson = localStorage.getItem(DAILY_SNAPSHOTS_STORAGE_KEY);
     return snapshotsJson ? JSON.parse(snapshotsJson) : [];

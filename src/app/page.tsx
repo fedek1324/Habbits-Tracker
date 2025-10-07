@@ -1,44 +1,50 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import HabitButton from "./components/HabbitButton";
 import AddHabbit from "./components/AddHabbit";
 import AddNote from "./components/AddNote";
 import IntegrationPannel from "./components/IntegrationPannel";
 import BottomNavigation from "./components/BottomNavigation";
 import HistoryView from "./components/HistoryView";
+import NoteButton from "./components/NoteButton";
 
-// Import write operations from syncManager instead
+import { useAppDispatch, useAppSelector } from "@/src/lib/hooks";
 import {
-  addHabit,
-  updateHabit,
-  deleteHabbitFromSnapshot,
-  updateHabitCount,
+  selectToday,
+  selectAllSnapshots,
+  selectTodaySnapshot,
+  updateNoteText,
+  deleteHabitFromSnapshot,
   updateHabitNeedCount,
-  getTodaySnapshot,
-  saveDailySnapshot,
-  fillHistory as fillHistoryLocalStorage,
-  initializeHabitsLocalStorage,
-  getHabits,
-  addNote,
-  getNotes,
-  updateNote,
+  updateHabitDidCount,
   deleteNoteFromSnapshot,
-} from "@/src/app/services/apiLocalStorage";
+  incrementHabitDidCount,
+} from "@/src/lib/features/habitsAndNotes/snapshotsSlice";
+import {
+  selectAllHabits,
+  updateHabit,
+} from "@/src/lib/features/habitsAndNotes/habitsSlice";
+import { selectAllNotes, updateNote } from "@/src/lib/features/habitsAndNotes/notesSlice";
+import { addHabitWithSnapshot, addNoteWithSnapshot, initializeStore } from "@/src/lib/thunks";
 
+import IHabbit from "@/src/app/types/habbit";
+import INote from "@/src/app/types/note";
+
+import { GoogleState } from "@/src/app/types/googleState";
+import { useGoogle } from "@/src/app/hooks/useGoogle";
 import {
   registerSyncFunction,
   triggerSync,
   unregisterSyncFunction,
 } from "@/src/app/services/syncManager";
 
-import IHabbit from "@/src/app/types/habbit";
-import IDailySnapshot from "@/src/app/types/dailySnapshot";
-import { getDailySnapshots } from "@/src/app/services/apiLocalStorage";
-import { GoogleState } from "@/src/app/types/googleState";
-import { useGoogle } from "@/src/app/hooks/useGoogle";
-import INote from "./types/note";
-import NoteButton from "./components/NoteButton";
+import {
+  getDailySnapshotsRaw,
+  getHabits,
+  getNotes,
+} from "./services/apiLocalStorage";
 
 type DispalyHabbit = {
   habitId: string;
@@ -56,12 +62,16 @@ type DispalyNote = {
 let homeRenderCount = 0;
 
 export default function Home() {
-  const [habits, setHabits] = useState<Array<IHabbit>>([]);
-  const [notes, setNotes] = useState<Array<INote>>([]);
-  const [snapshots, setSnapshots] = useState<Array<IDailySnapshot>>([]);
+  const dispatch = useAppDispatch();
+  const habits = useAppSelector(selectAllHabits);
+  const notes = useAppSelector(selectAllNotes);
+  const snapshots = useAppSelector(selectAllSnapshots)
+  const today = useAppSelector(selectToday);
+  const todaySnapshot = useAppSelector(selectTodaySnapshot);
+
+
   const [activeTab, setActiveTab] = useState<"today" | "history">("today");
   // const [error, setError] = useState<string>("");
-  const [today] = useState<Date>(new Date());
 
   const [refreshToken, setRefreshTokenPrivate] = useState<string>(
     typeof window !== "undefined"
@@ -77,6 +87,8 @@ export default function Home() {
   homeRenderCount++;
   console.log("Home: render. Total: " + homeRenderCount);
 
+  const todayDate = useMemo(() => new Date(today), [today]);
+
   const {
     googleState,
     getGoogleData,
@@ -84,7 +96,7 @@ export default function Home() {
     spreadsheetUrl,
     setGoolgeAccessToken,
     loadedData,
-  } = useGoogle(today, refreshToken);
+  } = useGoogle(todayDate, refreshToken);
 
   // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
 
@@ -93,50 +105,42 @@ export default function Home() {
     if (today) {
       if (loadedData) {
         console.log("Home: effect called Getting data from loaded data");
-        const { habits: habitsGoogle, notes: notesGoogle, snapshots: snapshotsGoogle } = loadedData;
-        initializeHabitsLocalStorage(habitsGoogle, notesGoogle, snapshotsGoogle);
-        // fill empty days in local storage
-        fillHistoryLocalStorage(today);
-
-        // get proper habits data from local storage
-        const habits = getHabits();
-        const notes = getNotes();
-        const snapshots = getDailySnapshots(today);
-        setHabits(habits);
-        setNotes(notes);
-        setSnapshots(snapshots);
+        // also fills history empty day snapshots
+        dispatch(initializeStore({ ...loadedData, today }));
       } else {
         console.log("Home: effect called Getting data from local storage");
         // get from local storage
+        const habitsLocalStorage = getHabits();
+        const notesLocalStorage = getNotes();
+        const snapshotsLocalStorage = getDailySnapshotsRaw();
 
         // fill history in local storage
-        fillHistoryLocalStorage(today);
-
-        // get habits data from local storage
-        const habits = getHabits();
-        const notes = getNotes();
-        const snapshots = getDailySnapshots(today);
-        setHabits(habits);
-        setNotes(notes);
-        setSnapshots(snapshots);
+        dispatch(
+          initializeStore({
+            habits: habitsLocalStorage,
+            notes: notesLocalStorage,
+            snapshots: snapshotsLocalStorage,
+            today,
+          })
+        );
       }
     } else {
       console.log("Home: effect called No today in Home effect");
     }
-  }, [today, loadedData]);
+  }, [today, loadedData, dispatch]);
 
   if (loadedData && today) {
-    registerSyncFunction(async () => await uploadDataToGoogle(today));
+    registerSyncFunction(async () => await uploadDataToGoogle(todayDate));
   } else {
     unregisterSyncFunction();
   }
 
   const handleSyncNowButtonClick = useCallback(() => {
-    if (!today) {
+    if (!todayDate) {
       return;
     }
-    getGoogleData(today);
-  }, [getGoogleData, today]);
+    getGoogleData(todayDate);
+  }, [getGoogleData, todayDate]);
 
   const updateGoogle = async (operation?: string) => {
     console.log("updateGoogle called with operation " + operation);
@@ -148,204 +152,90 @@ export default function Home() {
   };
 
   const handleAddHabit = async (newHabbit: IHabbit, needCount: number) => {
-    if (!today) {
-      return;
-    }
-    // Update localStorage
-    addHabit(newHabbit);
+    dispatch(addHabitWithSnapshot({ habit: newHabbit, initialNeedCount: needCount }))
 
-    // Add to today's snapshot to local storage if needed
-    const todaySnapshot = getTodaySnapshot(today);
-
-    todaySnapshot.habbits.push({
-      habbitId: newHabbit.id,
-      habbitNeedCount: needCount,
-      habbitDidCount: 0,
-    });
-    saveDailySnapshot(todaySnapshot);
-
-    const newSnapshotsArr = getDailySnapshots(today);
-
-    // Update local state
-    setHabits([...habits, newHabbit]);
-    setSnapshots(newSnapshotsArr);
-
-    await updateGoogle("handleAdd");
+    // await updateGoogle("handleAdd");
   };
 
   const handleIncrement = async (id: string) => {
-    if (!today) {
-      return;
-    }
-    // Add to today's snapshot to local storage if needed
-    const todaySnapshot = getTodaySnapshot(today);
+    dispatch(incrementHabitDidCount(id));
 
-    const habitData = todaySnapshot.habbits.find((h) => h.habbitId === id);
-    if (!habitData) return;
-
-    const newActualCount = Math.min(
-      habitData.habbitNeedCount,
-      habitData.habbitDidCount + 1
-    );
-
-    // Update in snapshot
-    updateHabitCount(id, newActualCount, today);
-
-    const newSnapshotsArr = getDailySnapshots(today);
-
-    // Update local state
-    setSnapshots(newSnapshotsArr);
-
-    await updateGoogle("handleIncrement");
+    // await updateGoogle("handleIncrement");
   };
 
   const handleDelete = async (id: string) => {
-    if (!today) {
-      return;
-    }
-    // Update local storage
-    // Not removing habit from habits for history.
-    deleteHabbitFromSnapshot(id, today);
+    console.log("handleDelete called for habit:", id);
+    console.log("Current today:", today);
+    console.log("Current todaySnapshot before delete:", todaySnapshot);
+    console.log("All snapshots:", snapshots);
 
-    const newSnapshotsArr = getDailySnapshots(today);
+    // habit remains in habits storage to display it in history.
+    // removing from todays snapshot to not add habit on next day.
+    dispatch(deleteHabitFromSnapshot(id))
 
-    // Update local state
-    // dont remove from habits because this habit can be used in history
-    setSnapshots(newSnapshotsArr);
+    console.log("After dispatch - todaySnapshot:", todaySnapshot);
 
     // Update google
-    await updateGoogle("handleDelete");
+    // await updateGoogle("handleDelete");
   };
 
   const handleEdit = async (
     habitChanged: IHabbit,
-    newNeedCount?: number,
-    newActualCount?: number
+    newNeedCount: number,
+    newActualCount: number
   ) => {
-    if (!today) {
-      return;
-    }
-    // Update local storage
-    updateHabitCount(habitChanged.id, newActualCount || 0, today);
-    updateHabitNeedCount(habitChanged.id, newNeedCount || 1, today);
-    // Update habit text if needed
-    updateHabit(habitChanged);
+    // TODO create thunk maybe
+    dispatch(updateHabit(habitChanged));
+    dispatch(updateHabitNeedCount({habitId: habitChanged.id, needCount: newNeedCount}));
+    dispatch(updateHabitDidCount({habitId: habitChanged.id, count: newActualCount}));
 
-    const newSnapshotsArr = getDailySnapshots(today);
-
-    // Update local state
-    setSnapshots(newSnapshotsArr);
-    setHabits(
-      habits.map((habit) => {
-        return habit.id === habitChanged.id ? habitChanged : habit;
-      })
-    );
-
-    await updateGoogle("handleEdit");
+    // await updateGoogle("handleEdit");
   };
 
   const handleAddNote = async (newNote: INote, text: string) => {
-    if (!today) {
-      return;
-    }
-    addNote(newNote);
-
-    // Add to today's snapshot to local storage if needed
-    const todaySnapshot = getTodaySnapshot(today);
-
-    todaySnapshot.notes.push({
-      noteId: newNote.id,
-      noteText: text,
-    });
-    saveDailySnapshot(todaySnapshot);
-
-    const newSnapshotsArr = getDailySnapshots(today);
-
-    // Update local state
-    setNotes([...notes, newNote]);
-    setSnapshots(newSnapshotsArr);
-
-    await updateGoogle("handleAddNote");
+    dispatch(addNoteWithSnapshot({note: newNote, initialText: text}));
+    // await updateGoogle("handleAddNote");
   };
 
   const handleNoteEdit = async (noteChanged: INote, noteText: string) => {
-    if (!today) {
-      return;
-    }
-    // Update note in localStorage
-    updateNote(noteChanged);
-
-    // Update note text in today's snapshot
-    const todaySnapshot = getTodaySnapshot(today);
-    const noteIndex = todaySnapshot.notes.findIndex((n) => n.noteId === noteChanged.id);
-    if (noteIndex !== -1) {
-      todaySnapshot.notes[noteIndex].noteText = noteText;
-    }
-    saveDailySnapshot(todaySnapshot);
-
-    const newSnapshotsArr = getDailySnapshots(today);
-
-    // Update local state
-    setSnapshots(newSnapshotsArr);
-    setNotes(
-      notes.map((note) => {
-        return note.id === noteChanged.id ? noteChanged : note;
-      })
-    );
+    // TODO create thunk maybe
+    dispatch(updateNote(noteChanged));
+    dispatch(updateNoteText({noteId: noteChanged.id, text: noteText}));
 
     // Update google
-    await updateGoogle("handleNoteEdit");
+    // await updateGoogle("handleNoteEdit");
   };
 
   const handleNoteDelete = async (id: string) => {
-    if (!today) {
-      return;
-    }
-    // Not removing note from notes for history.
-
-    // Remove from today's snapshot
-    deleteNoteFromSnapshot(id, today);
-
-    const newSnapshotsArr = getDailySnapshots(today);
-
-    // Update local state
-    setSnapshots(newSnapshotsArr);
+    // habit remains in habits storage to display it in history.
+    // removing from todays snapshot to not add habit on next day.
+    dispatch(deleteNoteFromSnapshot(id));
 
     // Update google
-    await updateGoogle("handleNoteDelete");
+    // await updateGoogle("handleNoteDelete");
   };
-
+  
   const displayHabits: DispalyHabbit[] = useMemo(() => {
-    if (!today) {
-      return [];
-    }
     const res = [];
-    const todayDay = today.toISOString().split("T")[0];
-    const todaySnapshot = snapshots.find(
-      (snapshot) => snapshot.date === todayDay
-    );
+    console.log(todaySnapshot);
     if (todaySnapshot) {
+      console.log(todaySnapshot.habbits);
       for (const habit of todaySnapshot.habbits) {
         res.push({
           habitId: habit.habbitId,
-          text: habits.find((h) => h.id === habit.habbitId)?.text || "No text for today",
+          text:
+            habits.find((h) => h.id === habit.habbitId)?.text ||
+            "No text for today",
           needCount: habit.habbitNeedCount,
           actualCount: habit.habbitDidCount,
         });
       }
     }
     return res;
-  }, [today, habits, snapshots]);
+  }, [todaySnapshot, habits]);
 
   const displayNotes: DispalyNote[] = useMemo(() => {
-    if (!today) {
-      return [];
-    }
     const res = [];
-    const todayDay = today.toISOString().split("T")[0];
-    const todaySnapshot = snapshots.find(
-      (snapshot) => snapshot.date === todayDay
-    );
     if (todaySnapshot) {
       for (const note of todaySnapshot.notes) {
         res.push({
@@ -356,10 +246,10 @@ export default function Home() {
       }
     }
     return res;
-  }, [today, notes, snapshots]);
+  }, [todaySnapshot, notes]);
 
-  const todayDisplayed = today
-    ? today.toLocaleDateString("en-US", {
+  const todayDisplayed = todayDate
+    ? todayDate.toLocaleDateString("en-US", {
         day: "numeric",
         month: "long",
       })
@@ -372,9 +262,9 @@ export default function Home() {
           {activeTab === "today" ? (
             <>
               <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
-                {displayHabits.length > 0
+                {displayHabits.length > 0 || displayNotes.length > 0
                   ? `Habits for today (${todayDisplayed}):`
-                  : "Add habit using the button below"}
+                  : "Add habit or note using the button below"}
               </h1>
 
               {/*Google integration panel */}
@@ -389,7 +279,7 @@ export default function Home() {
               </div>
 
               {/* Habbits and notes list */}
-              {displayHabits.length > 0 && (
+              {(displayHabits.length > 0 || displayNotes.length > 0) && (
                 <div className="mb-4 w-full space-y-4">
                   {displayHabits.map((habit) => {
                     return (
@@ -428,7 +318,12 @@ export default function Home() {
               <AddNote onAdd={handleAddNote} />
             </>
           ) : (
-            <HistoryView habits={habits} notes={notes} snapshots={snapshots} today={today} />
+            <HistoryView
+              habits={habits}
+              notes={notes}
+              snapshots={snapshots}
+              today={todayDate}
+            />
           )}
         </main>
 

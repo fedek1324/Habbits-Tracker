@@ -24,7 +24,7 @@ interface HabbitButtonProps {
   needCount: number;
   onIncrement: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (habbit: IHabbit, newNeedCount?: number, newActualCount?: number) => void;
+  onEdit: (habbit: IHabbit, newNeedCount: number, newActualCount: number) => void;
 }
 
 const HabitButton: React.FC<HabbitButtonProps> = ({
@@ -89,7 +89,7 @@ const HabitButton: React.FC<HabbitButtonProps> = ({
       text: newHabbitText.trim(),
     };
 
-    onEdit(updatedHabbit, habbitNeedCount, habbitCurrentCount);
+    onEdit(updatedHabbit, habbitNeedCount ?? 1, habbitCurrentCount ?? 0);
 
     setNewHabbitText("");
     setNewHabbitCurrentCount("");
