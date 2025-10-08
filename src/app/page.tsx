@@ -92,6 +92,7 @@ export default function Home() {
 
   // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
 
+  // TODO maybe create some async thunk that will init data on client to bypass hydration (local storage issue)
   useEffect(() => {
     // synchronize habits data with local storage or google
     if (today) {
