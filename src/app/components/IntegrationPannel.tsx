@@ -2,7 +2,7 @@ import { useGoogleLogin } from "@react-oauth/google";
 import React, { useRef } from "react";
 import { memo } from 'react';
 import axios from "axios";
-import { GoogleState } from "@/app/types/googleState";
+import { GoogleState } from "@/src/app/types/googleState";
 
 // TODO automate types
 interface IntegrationPannelProps {
@@ -12,6 +12,8 @@ interface IntegrationPannelProps {
   onSetGoogleRefreshToken: (token: string) => void;
   onSetGoogleAccessToken: (token: string) => void;
 }
+
+const googleApiPath = 'api/auth/google';
 
 const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function IntegrationPannel({
   state,
@@ -58,7 +60,7 @@ const IntegrationPannel: React.FC<IntegrationPannelProps> = memo(function Integr
       console.log("Login successful:", codeResponse);
       const code = codeResponse.code;
 
-      const tokenResponse = await axios.post("/api/auth/google", {
+      const tokenResponse = await axios.post(googleApiPath, {
         // Next.js API route that will exchange the code
         code,
       });

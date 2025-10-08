@@ -3,7 +3,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { FormEventHandler, useState } from "react";
 import Modal from "./Modal";
-import IHabbit from "@/app/types/habbit";
+import IHabbit from "@/src/app/types/habbit";
 
 const AddHabbit: React.FC<{ onAdd: (habbit: IHabbit, needCount: number) => void }> = ({
   onAdd,

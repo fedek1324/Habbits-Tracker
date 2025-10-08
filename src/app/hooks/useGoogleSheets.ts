@@ -1,11 +1,11 @@
 "use client";
 
-import { getDailySnapshots, getHabits, getNotes } from "@/app/services/apiLocalStorage";
-import IDailySnapshot from "@/app/types/dailySnapshot";
-import { GoogleState } from "@/app/types/googleState";
-import IHabbit from "@/app/types/habbit";
-import IHabitsAndNotesData from "@/app/types/habitsData";
-import INote from "@/app/types/note";
+import { getDailySnapshots, getHabits, getNotes } from "@/src/app/services/apiLocalStorage";
+import IDailySnapshot from "@/src/app/types/dailySnapshot";
+import { GoogleState } from "@/src/app/types/googleState";
+import IHabbit from "@/src/app/types/habbit";
+import IHabitsAndNotesData from "@/src/app/types/habitsData";
+import INote from "@/src/app/types/note";
 import axios from "axios";
 import { useCallback, useEffect, useState, useRef } from "react";
 
@@ -15,6 +15,8 @@ type SpreadSheetData = {
   values: Array<Array<string>> | undefined;
 };
 
+const apiGoogleRefreshTokenUrl = "/api/auth/google/refresh-token";
+
 /**
  * get Access Token using refreshToken
  */
@@ -23,7 +25,7 @@ const refreshAccessToken = async (
 ): Promise<string | null> => {
   try {
     console.log("Refreshing access token...");
-    const response = await axios.post("/api/auth/google/refresh-token", {
+    const response = await axios.post(apiGoogleRefreshTokenUrl, {
       refreshToken,
     });
 
@@ -179,7 +181,7 @@ const SPREADSHEET_NAME = "My habits tracker";
 
 let renderCount = 0;
 
-export const useGoogle = (today: Date | undefined, refreshToken: string) => {
+export const useGoogleSheets = (today: Date | undefined, refreshToken: string) => {
   const [state, setState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
 
   const accessTokenRef = useRef<string>(undefined);

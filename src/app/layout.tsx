@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import StoreProvider from "./StoreProvider";
 
 export const metadata: Metadata = {
   title: "Habits tracker",
   description: "Habits tracker app",
 };
+
+// https://redux.js.org/usage/nextjs#caching
+export const dynamic = 'force-dynamic'
 
 export default function RootLayout({
   children,
@@ -55,9 +59,11 @@ export default function RootLayout({
             <img src="https://mc.yandex.ru/watch/104433525" style={{ position: 'absolute', left: '-9999px' }} alt="" />
           </div>
         </noscript>
-        <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ""}>
-          {children}
-        </GoogleOAuthProvider>;
+        <StoreProvider>
+          <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ""}>
+            {children}
+          </GoogleOAuthProvider>;
+        </StoreProvider>
       </body>
     </html>
   );

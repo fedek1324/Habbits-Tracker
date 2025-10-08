@@ -1,9 +1,9 @@
 "use client";
 
-import IHabbit from "@/app/types/habbit";
-import INote from "@/app/types/note";
+import IHabbit from "@/src/app/types/habbit";
+import INote from "@/src/app/types/note";
 import { IoCheckmarkCircle } from "react-icons/io5";
-import IDailySnapshot from "@/app/types/dailySnapshot";
+import IDailySnapshot from "@/src/app/types/dailySnapshot";
 
 interface HistoryViewProps {
   habits: IHabbit[];

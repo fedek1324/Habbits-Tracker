@@ -1,4 +1,4 @@
-import INote from "@/app/types/note";
+import INote from "@/src/app/types/note";
 import { FormEventHandler, useEffect, useState } from "react";
 import { LuTrash } from "react-icons/lu";
 import { MdOutlineEdit } from "react-icons/md";
