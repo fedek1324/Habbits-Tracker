@@ -17,6 +17,19 @@ type SpreadSheetData = {
 
 const apiGoogleRefreshTokenUrl = "/api/auth/google/refresh-token";
 
+const DEBOUNCE_MS = 500;
+let debounceTimer: NodeJS.Timeout | null = null;
+/**
+ * If true query to google is performing
+ */
+let pending = false;
+
+/**
+ * If syncToSpreadsheetFn was called to execute in time 
+ * of other query execute then suspend it and set hasQueue to true
+ */
+let hasQueue = false;
+
 /**
  * get Access Token using refreshToken
  */
@@ -995,10 +1008,70 @@ export const useGoogleSheets = (today: Date | undefined, refreshToken: string) =
     }
   }, [populateSpreadsheetWithHabits, spreadsheetId, refreshToken]);
 
+    /**
+   * Actual sync execution function
+   */
+  const uploadDataSafe = useCallback( async (today: Date, operationName: string) => {
+    console.log("🔄 Triggering spreadsheet sync...");
+    pending = true;
+    try {
+      await uploadData(today);
+      console.log("✅ Spreadsheet sync completed");
+    } catch (error) {
+      console.error("❌ Spreadsheet sync failed:", error);
+    } finally {
+      pending = false;
+
+      if (hasQueue) {
+        hasQueue = false;
+        await uploadDataSafe(today, operationName);
+      }
+    }
+  }, [uploadData]);
+
+  const triggerSync = useCallback(async (today: Date, operationName: string) => {
+    console.log("triggerSync called with operation " + operationName);
+    
+    if (state === GoogleState.NOT_CONNECTED) {
+      return;
+    }
+    if (!today || !refreshToken) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      console.log("Promise triggerSync called with operation " + operationName);
+
+      // Clear existing timer
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      // Set new timer
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        if (!pending) {
+           uploadDataSafe(today, operationName).then(() => {
+            resolve(true);
+          });
+        } else {
+          console.log("Pending is now. Operation suspended");
+          hasQueue = true;
+        }
+      }, DEBOUNCE_MS);
+
+      console.log(
+        `⏱️ Sync scheduled in ${DEBOUNCE_MS}ms (debounced). 
+        Operation name: ${operationName}`
+      );
+    })
+  }, [refreshToken, state, uploadDataSafe]);
+
+
   return {
     googleState: state,
     getGoogleData,
-    uploadDataToGoogle: uploadData,
+    uploadDataToGoogle: triggerSync,
     setGoolgeAccessToken: setAccessToken,
     spreadsheetUrl,
     spreadsheetId,

@@ -34,11 +34,6 @@ import INote from "@/src/app/types/note";
 
 import { GoogleState } from "@/src/app/types/googleState";
 import { useGoogleSheets as useGoogleSheets } from "@/src/app/hooks/useGoogleSheets";
-import {
-  registerSyncFunction,
-  triggerSync,
-  unregisterSyncFunction,
-} from "@/src/app/services/syncManager";
 
 import {
   getDailySnapshotsRaw,
@@ -130,12 +125,6 @@ export default function Home() {
   homeRenderCount++;
   console.log("Home: render. Total: " + homeRenderCount);
 
-  if (loadedData && today) {
-    registerSyncFunction(async () => await uploadDataToGoogle(todayDate));
-  } else {
-    unregisterSyncFunction();
-  }
-
   const handleSyncNowButtonClick = useCallback(() => {
     if (!todayDate) {
       return;
@@ -143,25 +132,16 @@ export default function Home() {
     getGoogleData(todayDate);
   }, [getGoogleData, todayDate]);
 
-  const updateGoogle = async (operation?: string) => {
-    console.log("updateGoogle called with operation " + operation);
-    if (googleState !== GoogleState.NOT_CONNECTED) {
-      // Update google spreadsheet
-      // TODO handle error
-      await triggerSync(operation);
-    }
-  };
-
   const handleAddHabit = async (newHabbit: IHabbit, needCount: number) => {
     dispatch(addHabitWithSnapshot({ habit: newHabbit, initialNeedCount: needCount }))
 
-    await updateGoogle("handleAdd");
+    await uploadDataToGoogle(todayDate, "handleAdd");
   };
 
   const handleIncrement = async (id: string) => {
     dispatch(incrementHabitDidCount(id));
 
-    await updateGoogle("handleIncrement");
+    await uploadDataToGoogle(todayDate, "handleAdd");
   };
 
   const handleDelete = async (id: string) => {
@@ -177,7 +157,7 @@ export default function Home() {
     console.log("After dispatch - todaySnapshot:", todaySnapshot);
 
     // Update google
-    await updateGoogle("handleDelete");
+    await uploadDataToGoogle(todayDate, "handleAdd");
   };
 
   const handleEdit = async (
@@ -190,12 +170,12 @@ export default function Home() {
     dispatch(updateHabitNeedCount({habitId: habitChanged.id, needCount: newNeedCount}));
     dispatch(updateHabitDidCount({habitId: habitChanged.id, count: newActualCount}));
 
-    await updateGoogle("handleEdit");
+    await uploadDataToGoogle(todayDate, "handleAdd");
   };
 
   const handleAddNote = async (newNote: INote, text: string) => {
     dispatch(addNoteWithSnapshot({note: newNote, initialText: text}));
-    await updateGoogle("handleAddNote");
+    await uploadDataToGoogle(todayDate, "handleAdd");
   };
 
   const handleNoteEdit = async (noteChanged: INote, noteText: string) => {
@@ -204,7 +184,7 @@ export default function Home() {
     dispatch(updateNoteText({noteId: noteChanged.id, text: noteText}));
 
     // Update google
-    await updateGoogle("handleNoteEdit");
+    await uploadDataToGoogle(todayDate, "handleAdd");
   };
 
   const handleNoteDelete = async (id: string) => {
@@ -213,7 +193,7 @@ export default function Home() {
     dispatch(deleteNoteFromSnapshot(id));
 
     // Update google
-    await updateGoogle("handleNoteDelete");
+    await uploadDataToGoogle(todayDate, "handleAdd");
   };
   
   const displayHabits: DispalyHabbit[] = useMemo(() => {
