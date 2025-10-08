@@ -181,7 +181,7 @@ const SPREADSHEET_NAME = "My habits tracker";
 
 let renderCount = 0;
 
-export const useGoogle = (today: Date | undefined, refreshToken: string) => {
+export const useGoogleSheets = (today: Date | undefined, refreshToken: string) => {
   const [state, setState] = useState<GoogleState>(GoogleState.NOT_CONNECTED);
 
   const accessTokenRef = useRef<string>(undefined);

@@ -33,7 +33,7 @@ import IHabbit from "@/src/app/types/habbit";
 import INote from "@/src/app/types/note";
 
 import { GoogleState } from "@/src/app/types/googleState";
-import { useGoogle } from "@/src/app/hooks/useGoogle";
+import { useGoogleSheets as useGoogleSheets } from "@/src/app/hooks/useGoogleSheets";
 import {
   registerSyncFunction,
   triggerSync,
@@ -79,14 +79,6 @@ export default function Home() {
       : ""
   );
 
-  const setRefreshToken = (refreshToken: string) => {
-    localStorage.setItem("googleRefreshToken", refreshToken || "");
-    setRefreshTokenPrivate(refreshToken || "");
-  };
-
-  homeRenderCount++;
-  console.log("Home: render. Total: " + homeRenderCount);
-
   const todayDate = useMemo(() => new Date(today), [today]);
 
   const {
@@ -96,7 +88,7 @@ export default function Home() {
     spreadsheetUrl,
     setGoolgeAccessToken,
     loadedData,
-  } = useGoogle(todayDate, refreshToken);
+  } = useGoogleSheets(todayDate, refreshToken);
 
   // const prevGoogleStateRef = useRef<GoogleState>(GoogleState.NOT_CONNECTED);
 
@@ -128,6 +120,14 @@ export default function Home() {
       console.log("Home: effect called No today in Home effect");
     }
   }, [today, loadedData, dispatch]);
+  
+  const setRefreshToken = (refreshToken: string) => {
+    localStorage.setItem("googleRefreshToken", refreshToken || "");
+    setRefreshTokenPrivate(refreshToken || "");
+  };
+
+  homeRenderCount++;
+  console.log("Home: render. Total: " + homeRenderCount);
 
   if (loadedData && today) {
     registerSyncFunction(async () => await uploadDataToGoogle(todayDate));
