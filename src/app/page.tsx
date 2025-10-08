@@ -33,7 +33,7 @@ import IHabbit from "@/src/app/types/habbit";
 import INote from "@/src/app/types/note";
 
 import { GoogleState } from "@/src/app/types/googleState";
-import { useGoogleSheets as useGoogleSheets } from "@/src/app/hooks/useGoogleSheets";
+import { useGoogleSheets } from "@/src/app/hooks/useGoogleSheets";
 
 import {
   getDailySnapshotsRaw,
@@ -145,16 +145,9 @@ export default function Home() {
   };
 
   const handleDelete = async (id: string) => {
-    console.log("handleDelete called for habit:", id);
-    console.log("Current today:", today);
-    console.log("Current todaySnapshot before delete:", todaySnapshot);
-    console.log("All snapshots:", snapshots);
-
     // habit remains in habits storage to display it in history.
     // removing from todays snapshot to not add habit on next day.
     dispatch(deleteHabitFromSnapshot(id))
-
-    console.log("After dispatch - todaySnapshot:", todaySnapshot);
 
     // Update google
     await uploadDataToGoogle(todayDate, "handleAdd");
