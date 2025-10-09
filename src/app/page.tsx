@@ -27,7 +27,7 @@ import {
   updateHabit,
 } from "@/src/lib/features/habitsAndNotes/habitsSlice";
 import { selectAllNotes, updateNote } from "@/src/lib/features/habitsAndNotes/notesSlice";
-import { addHabitWithSnapshot, addNoteWithSnapshot, initializeStore } from "@/src/lib/thunks";
+import { addHabitWithSnapshot, addNoteWithSnapshot, initializeStore } from "@/src/lib/features/habitsAndNotes/thunks";
 
 import IHabbit from "@/src/app/types/habbit";
 import INote from "@/src/app/types/note";
